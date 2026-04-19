@@ -55,26 +55,6 @@ async function chatWithRetry(messages: { role: string; content: string }[]): Pro
   throw lastError || new Error("AI request failed after retries");
 }
 
-function parseJsonField<T>(content: string, fieldName: string): T {
-  const regex = new RegExp(````(?:json)?\\s*[\\s\\S]*?"${fieldName}"\\s*:\\s*([\\s\\S]*?)(?:```|\\n\\n)`, "i");
-  const match = content.match(regex);
-  if (match) {
-    try {
-      const jsonStr = `{ "${fieldName}": ${match[1]} }`.replace(/,\s*}/g, "}");
-      return JSON.parse(jsonStr)[fieldName];
-    } catch {}
-  }
-
-  const jsonMatch = content.match(new RegExp(`${fieldName}[:\\s]+(\\[[\\s\\S]*?\\])`, "i"));
-  if (jsonMatch) {
-    try {
-      return JSON.parse(jsonMatch[1].replace(/'/g, '"'));
-    } catch {}
-  }
-
-  return [] as unknown as T;
-}
-
 function extractArrayFromText(text: string): string[] {
   const lines = text.split("\n").filter((line) => {
     const trimmed = line.trim();
@@ -87,18 +67,20 @@ function extractArrayFromText(text: string): string[] {
 }
 
 function parseJobsResponse(content: string): JTBD["jobs"] {
+  const all = extractArrayFromText(content);
   return {
-    functional: extractArrayFromText(content),
-    emotional: extractArrayFromText(content.replace(/functional/gi, "")).slice(0, 3),
-    social: [],
+    functional: all.slice(0, 3),
+    emotional: all.slice(3, 6),
+    social: all.slice(6, 9),
   };
 }
 
 function parsePainsResponse(content: string): JTBD["pains"] {
+  const all = extractArrayFromText(content);
   return {
-    functional: extractArrayFromText(content),
-    emotional: extractArrayFromText(content.replace(/functional/gi, "")).slice(0, 3),
-    social: [],
+    functional: all.slice(0, 3),
+    emotional: all.slice(3, 6),
+    social: all.slice(6, 9),
   };
 }
 
