@@ -292,14 +292,28 @@ export default function Home() {
         throw new Error(errData.error || "Ошибка при анализе продукта");
       }
 
-      const jtbdData: JTBDApiResponse = await jtbdRes.json();
-      setJtbd(jtbdData.jtbd as unknown as JTBDResponse);
+      const jtbdRaw = (await jtbdRes.json()) as JTBDApiResponse;
+      const jtbd: JTBDResponse = {
+        jobs: [
+          ...jtbdRaw.jtbd.jobs.functional.map((text, i) => ({ id: `job-func-${i}`, text, type: "functional" as const })),
+          ...jtbdRaw.jtbd.jobs.emotional.map((text, i) => ({ id: `job-emo-${i}`, text, type: "emotional" as const })),
+          ...jtbdRaw.jtbd.jobs.social.map((text, i) => ({ id: `job-soc-${i}`, text, type: "social" as const })),
+        ],
+        pains: [
+          ...jtbdRaw.jtbd.pains.functional.map((text, i) => ({ id: `pain-func-${i}`, text, type: "functional" as const })),
+          ...jtbdRaw.jtbd.pains.emotional.map((text, i) => ({ id: `pain-emo-${i}`, text, type: "emotional" as const })),
+          ...jtbdRaw.jtbd.pains.social.map((text, i) => ({ id: `pain-soc-${i}`, text, type: "social" as const })),
+        ],
+        benefits: jtbdRaw.jtbd.benefits.map((text, i) => ({ id: `benefit-${i}`, text })),
+        useCases: jtbdRaw.jtbd.useCases.map((text, i) => ({ id: `usecase-${i}`, text })),
+      };
+      setJtbd(jtbd);
 
       // Step 2: Generate Ad Creatives
       const creativesRes = await fetch("/api/generate-creatives", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ jtbd: jtbdData.jtbd, productIdea: productIdea.trim() }),
+        body: JSON.stringify({ jtbd: jtbdRaw.jtbd, productIdea: productIdea.trim() }),
       });
 
       if (!creativesRes.ok) {
