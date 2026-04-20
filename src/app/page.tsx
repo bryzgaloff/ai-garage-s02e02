@@ -35,6 +35,15 @@ interface JTBDResponse {
   useCases: UseCase[];
 }
 
+interface JTBDApiResponse {
+  jtbd: {
+    jobs: { functional: string[]; emotional: string[]; social: string[] };
+    pains: { functional: string[]; emotional: string[]; social: string[] };
+    benefits: string[];
+    useCases: string[];
+  };
+}
+
 // Types for Ad Creatives
 interface AdHeadline {
   id: string;
@@ -283,8 +292,8 @@ export default function Home() {
         throw new Error(errData.error || "Ошибка при анализе продукта");
       }
 
-      const jtbdData: JTBDResponse = await jtbdRes.json();
-      setJtbd(jtbdData);
+      const jtbdData: JTBDApiResponse = await jtbdRes.json();
+      setJtbd(jtbdData.jtbd as unknown as JTBDResponse);
 
       // Step 2: Generate Ad Creatives
       const creativesRes = await fetch("/api/generate-creatives", {
