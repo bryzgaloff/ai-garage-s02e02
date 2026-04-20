@@ -321,8 +321,15 @@ export default function Home() {
         throw new Error(errData.error || "Ошибка при генерации креативов");
       }
 
-      const creativesData: AdCreativeResponse = await creativesRes.json();
-      setCreatives(creativesData);
+      const creativesRaw = await creativesRes.json();
+      const creatives: AdCreativeResponse = {
+        headlines: (creativesRaw.creatives.headlines || []).map((text: string, i: number) => ({ id: `hl-${i}`, text })),
+        googleAdsDescriptions: (creativesRaw.creatives.googleAds || []).map((text: string, i: number) => ({ id: `gad-${i}`, text })),
+        metaAdsTexts: (creativesRaw.creatives.metaAds || []).map((text: string, i: number) => ({ id: `mad-${i}`, text })),
+        heroTexts: (creativesRaw.creatives.heroTexts || []).map((text: string, i: number) => ({ id: `hero-${i}`, text })),
+        ctaVariations: (creativesRaw.creatives.ctaVariations || []).map((text: string, i: number) => ({ id: `cta-${i}`, text })),
+      };
+      setCreatives(creatives);
       setShowResults(true);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Неизвестная ошибка");
