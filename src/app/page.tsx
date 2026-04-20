@@ -295,17 +295,17 @@ export default function Home() {
       const jtbdRaw = (await jtbdRes.json()) as JTBDApiResponse;
       const jtbd: JTBDResponse = {
         jobs: [
-          ...jtbdRaw.jtbd.jobs.functional.map((text, i) => ({ id: `job-func-${i}`, text, type: "functional" as const })),
-          ...jtbdRaw.jtbd.jobs.emotional.map((text, i) => ({ id: `job-emo-${i}`, text, type: "emotional" as const })),
-          ...jtbdRaw.jtbd.jobs.social.map((text, i) => ({ id: `job-soc-${i}`, text, type: "social" as const })),
+          ...(jtbdRaw.jtbd.jobs?.functional || []).map((text: string, i: number) => ({ id: `job-func-${i}`, text, type: "functional" as const })),
+          ...(jtbdRaw.jtbd.jobs?.emotional || []).map((text: string, i: number) => ({ id: `job-emo-${i}`, text, type: "emotional" as const })),
+          ...(jtbdRaw.jtbd.jobs?.social || []).map((text: string, i: number) => ({ id: `job-soc-${i}`, text, type: "social" as const })),
         ],
         pains: [
-          ...jtbdRaw.jtbd.pains.functional.map((text, i) => ({ id: `pain-func-${i}`, text, type: "functional" as const })),
-          ...jtbdRaw.jtbd.pains.emotional.map((text, i) => ({ id: `pain-emo-${i}`, text, type: "emotional" as const })),
-          ...jtbdRaw.jtbd.pains.social.map((text, i) => ({ id: `pain-soc-${i}`, text, type: "social" as const })),
+          ...(jtbdRaw.jtbd.pains?.functional || []).map((text: string, i: number) => ({ id: `pain-func-${i}`, text, type: "functional" as const })),
+          ...(jtbdRaw.jtbd.pains?.emotional || []).map((text: string, i: number) => ({ id: `pain-emo-${i}`, text, type: "emotional" as const })),
+          ...(jtbdRaw.jtbd.pains?.social || []).map((text: string, i: number) => ({ id: `pain-soc-${i}`, text, type: "social" as const })),
         ],
-        benefits: jtbdRaw.jtbd.benefits.map((text, i) => ({ id: `benefit-${i}`, text })),
-        useCases: jtbdRaw.jtbd.useCases.map((text, i) => ({ id: `usecase-${i}`, text })),
+        benefits: (jtbdRaw.jtbd.benefits || []).map((text: string, i: number) => ({ id: `benefit-${i}`, text })),
+        useCases: (jtbdRaw.jtbd.useCases || []).map((text: string, i: number) => ({ id: `usecase-${i}`, text })),
       };
       setJtbd(jtbd);
 
@@ -323,11 +323,11 @@ export default function Home() {
 
       const creativesRaw = await creativesRes.json();
       const creatives: AdCreativeResponse = {
-        headlines: (creativesRaw.creatives.headlines || []).map((text: string, i: number) => ({ id: `hl-${i}`, text })),
-        googleAdsDescriptions: (creativesRaw.creatives.googleAds || []).map((text: string, i: number) => ({ id: `gad-${i}`, text })),
-        metaAdsTexts: (creativesRaw.creatives.metaAds || []).map((text: string, i: number) => ({ id: `mad-${i}`, text })),
-        heroTexts: (creativesRaw.creatives.heroTexts || []).map((text: string, i: number) => ({ id: `hero-${i}`, text })),
-        ctaVariations: (creativesRaw.creatives.ctaVariations || []).map((text: string, i: number) => ({ id: `cta-${i}`, text })),
+        headlines: (creativesRaw.creatives?.headlines || []).map((text: string, i: number) => ({ id: `hl-${i}`, text })),
+        googleAdsDescriptions: (creativesRaw.creatives?.googleAds || []).map((text: string, i: number) => ({ id: `gad-${i}`, text })),
+        metaAdsTexts: (creativesRaw.creatives?.metaAds || []).map((text: string, i: number) => ({ id: `mad-${i}`, text })),
+        heroTexts: (creativesRaw.creatives?.heroTexts || []).map((text: string, i: number) => ({ id: `hero-${i}`, text })),
+        ctaVariations: (creativesRaw.creatives?.ctaVariations || []).map((text: string, i: number) => ({ id: `cta-${i}`, text })),
       };
       setCreatives(creatives);
       setShowResults(true);
