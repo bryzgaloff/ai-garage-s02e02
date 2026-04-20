@@ -290,7 +290,7 @@ export default function Home() {
       const creativesRes = await fetch("/api/generate-creatives", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ jtbd: jtbdData, productIdea: productIdea.trim() }),
+        body: JSON.stringify({ jtbd: jtbdData.jtbd, productIdea: productIdea.trim() }),
       });
 
       if (!creativesRes.ok) {
