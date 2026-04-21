@@ -110,35 +110,49 @@ export async function POST(request: NextRequest) {
       useCases: [],
     };
 
-    const jobsPrompt = `Analyze this product idea and identify the Jobs-to-be-done. A Job represents a task or problem a customer hires the product to solve. 
+    const stream = new ReadableStream({
+      async start(controller) {
+        // Helper function to send SSE event
+        const sendEvent = (data: any, event?: string) => {
+          let message = "data: " + JSON.stringify(data) + "\n\n";
+          if (event) {
+            message = `event: ${event}\n${message}`;
+          }
+          controller.enqueue(new TextEncoder().encode(message));
+        };
+
+        try {
+
+          // Generate jobs first
+          const jobsPrompt = `Analyze this product idea and identify the Jobs-to-be-done. A Job represents a task or problem a customer hires the product to solve.
 
 Product: ${productIdea}
 
 List the functional jobs (core tasks customers need to accomplish):
 - `;
 
-    const jobsContent = await chatWithRetry([
-      { role: "system", content: "You are a product strategy expert. Analyze products and identify Jobs-to-be-done. Provide concise bullet points." },
-      { role: "user", content: jobsPrompt },
-    ]);
+          const jobsContent = await chatWithRetry([
+            { role: "system", content: "You are a product strategy expert. Analyze products and identify Jobs-to-be-done. Provide concise bullet points." },
+            { role: "user", content: jobsPrompt },
+          ]);
 
-    jtbd.jobs.functional = parseJobsResponse(jobsContent).functional;
+          jtbd.jobs.functional = parseJobsResponse(jobsContent).functional;
 
-    const emotionalPrompt = `Based on the functional jobs: ${jtbd.jobs.functional.join(", ")}
+          const emotionalPrompt = `Based on the functional jobs: ${jtbd.jobs.functional.join(", ")}
 
 Product: ${productIdea}
 
 What emotional jobs do customers have? (How do they want to feel or avoid feeling?)
 - `;
 
-    const emotionalContent = await chatWithRetry([
-      { role: "system", content: "You are a product strategy expert. Identify emotional aspects of customer jobs." },
-      { role: "user", content: emotionalPrompt },
-    ]);
+          const emotionalContent = await chatWithRetry([
+            { role: "system", content: "You are a product strategy expert. Identify emotional aspects of customer jobs." },
+            { role: "user", content: emotionalPrompt },
+          ]);
 
-    jtbd.jobs.emotional = parseJobsResponse(emotionalContent).emotional;
+          jtbd.jobs.emotional = parseJobsResponse(emotionalContent).emotional;
 
-    const socialPrompt = `Based on:
+          const socialPrompt = `Based on:
 Functional jobs: ${jtbd.jobs.functional.join(", ")}
 Emotional jobs: ${jtbd.jobs.emotional.join(", ")}
 
@@ -147,14 +161,18 @@ Product: ${productIdea}
 What social jobs do customers have? (How do they want to be perceived by others?)
 - `;
 
-    const socialContent = await chatWithRetry([
-      { role: "system", content: "You are a product strategy expert. Identify social aspects of customer jobs." },
-      { role: "user", content: socialPrompt },
-    ]);
+          const socialContent = await chatWithRetry([
+            { role: "system", content: "You are a product strategy expert. Identify social aspects of customer jobs." },
+            { role: "user", content: socialPrompt },
+          ]);
 
-    jtbd.jobs.social = parseJobsResponse(socialContent).social;
+          jtbd.jobs.social = parseJobsResponse(socialContent).social;
 
-    const painsPrompt = `Analyze this product and identify customer Pains (negative outcomes, risks, obstacles).
+          // Stream jobs
+          sendEvent({ jtbd }, "jobs");
+
+          // Generate pains
+          const painsPrompt = `Analyze this product and identify customer Pains (negative outcomes, risks, obstacles).
 
 Product: ${productIdea}
 Jobs: ${[...jtbd.jobs.functional, ...jtbd.jobs.emotional, ...jtbd.jobs.social].join(", ")}
@@ -162,40 +180,44 @@ Jobs: ${[...jtbd.jobs.functional, ...jtbd.jobs.emotional, ...jtbd.jobs.social].j
 List functional pains (problems, inefficiencies, missing features):
 - `;
 
-    const painsContent = await chatWithRetry([
-      { role: "system", content: "You are a product strategy expert. Identify customer pains and frustrations." },
-      { role: "user", content: painsPrompt },
-    ]);
+          const painsContent = await chatWithRetry([
+            { role: "system", content: "You are a product strategy expert. Identify customer pains and frustrations." },
+            { role: "user", content: painsPrompt },
+          ]);
 
-    jtbd.pains.functional = parsePainsResponse(painsContent).functional;
+          jtbd.pains.functional = parsePainsResponse(painsContent).functional;
 
-    const emotionalPainsPrompt = `Product: ${productIdea}
+          const emotionalPainsPrompt = `Product: ${productIdea}
 Functional jobs: ${jtbd.jobs.functional.join(", ")}
 
 What emotional pains do customers experience? (frustrations, anxieties, fears)
 - `;
 
-    const emotionalPainsContent = await chatWithRetry([
-      { role: "system", content: "You are a product strategy expert. Identify emotional customer pains." },
-      { role: "user", content: emotionalPainsPrompt },
-    ]);
+          const emotionalPainsContent = await chatWithRetry([
+            { role: "system", content: "You are a product strategy expert. Identify emotional customer pains." },
+            { role: "user", content: emotionalPainsPrompt },
+          ]);
 
-    jtbd.pains.emotional = parsePainsResponse(emotionalPainsContent).emotional;
+          jtbd.pains.emotional = parsePainsResponse(emotionalPainsContent).emotional;
 
-    const socialPainsPrompt = `Product: ${productIdea}
+          const socialPainsPrompt = `Product: ${productIdea}
 Jobs: ${jtbd.jobs.functional.join(", ")}
 
 What social pains do customers face? (embarrassment, status concerns, peer pressure)
 - `;
 
-    const socialPainsContent = await chatWithRetry([
-      { role: "system", content: "You are a product strategy expert. Identify social customer pains." },
-      { role: "user", content: socialPainsPrompt },
-    ]);
+          const socialPainsContent = await chatWithRetry([
+            { role: "system", content: "You are a product strategy expert. Identify social customer pains." },
+            { role: "user", content: socialPainsPrompt },
+          ]);
 
-    jtbd.pains.social = parsePainsResponse(socialPainsContent).social;
+          jtbd.pains.social = parsePainsResponse(socialPainsContent).social;
 
-    const benefitsPrompt = `Based on the Jobs and Pains identified:
+          // Stream pains
+          sendEvent({ jtbd }, "pains");
+
+          // Generate benefits
+          const benefitsPrompt = `Based on the Jobs and Pains identified:
 
 Jobs: ${[...jtbd.jobs.functional, ...jtbd.jobs.emotional, ...jtbd.jobs.social].join(", ")}
 Pains: ${[...jtbd.pains.functional, ...jtbd.pains.emotional, ...jtbd.pains.social].join(", ")}
@@ -205,14 +227,18 @@ Product: ${productIdea}
 List the key benefits this product provides to address these jobs and pains:
 - `;
 
-    const benefitsContent = await chatWithRetry([
-      { role: "system", content: "You are a product strategy expert. Identify product benefits that address customer jobs and pains." },
-      { role: "user", content: benefitsPrompt },
-    ]);
+          const benefitsContent = await chatWithRetry([
+            { role: "system", content: "You are a product strategy expert. Identify product benefits that address customer jobs and pains." },
+            { role: "user", content: benefitsPrompt },
+          ]);
 
-    jtbd.benefits = parseBenefitsResponse(benefitsContent);
+          jtbd.benefits = parseBenefitsResponse(benefitsContent);
 
-    const useCasesPrompt = `Based on the JTBD framework:
+          // Stream benefits
+          sendEvent({ jtbd }, "benefits");
+
+          // Generate use cases
+          const useCasesPrompt = `Based on the JTBD framework:
 
 Jobs: ${[...jtbd.jobs.functional, ...jtbd.jobs.emotional, ...jtbd.jobs.social].join(", ")}
 Benefits: ${jtbd.benefits.join(", ")}
@@ -222,14 +248,35 @@ Product: ${productIdea}
 List the primary use cases (specific situations where customers use the product):
 - `;
 
-    const useCasesContent = await chatWithRetry([
-      { role: "system", content: "You are a product strategy expert. Identify specific use cases for products." },
-      { role: "user", content: useCasesPrompt },
-    ]);
+          const useCasesContent = await chatWithRetry([
+            { role: "system", content: "You are a product strategy expert. Identify specific use cases for products." },
+            { role: "user", content: useCasesPrompt },
+          ]);
 
-    jtbd.useCases = parseUseCasesResponse(useCasesContent);
+          jtbd.useCases = parseUseCasesResponse(useCasesContent);
 
-    return NextResponse.json({ jtbd });
+          // Stream use cases
+          sendEvent({ jtbd }, "useCases");
+
+          // Send completion event
+          sendEvent({ jtbd }, "complete");
+
+          controller.close();
+        } catch (error) {
+          console.error("JTBD streaming error:", error);
+          sendEvent({ error: error instanceof Error ? error.message : "Failed to generate JTBD" }, "error");
+          controller.close();
+        }
+      },
+    });
+
+    return new Response(stream, {
+      headers: {
+        "Content-Type": "text/event-stream",
+        "Cache-Control": "no-cache",
+        "Connection": "keep-alive",
+      },
+    });
   } catch (error) {
     console.error("JTBD generation error:", error);
     return NextResponse.json(
