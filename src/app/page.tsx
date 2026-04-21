@@ -220,6 +220,7 @@ function EmptyState() {
 export default function Home() {
   const [productIdea, setProductIdea] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [isGeneratingCreatives, setIsGeneratingCreatives] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [jtbd, setJtbd] = useState<JTBDResponse | null>(null);
   const [creatives, setCreatives] = useState<AdCreativeResponse | null>(null);
@@ -251,32 +252,41 @@ export default function Home() {
       const jtbdRaw = (await jtbdRes.json()) as JTBDApiResponse;
       const jtbd = transformJTBD(jtbdRaw);
       setJtbd(jtbd);
+      setShowResults(true); // Show JTBD results immediately
+      setIsLoading(false); // Stop main loading
 
-      // Step 2: Generate Ad Creatives
-      const creativesRes = await fetch("/api/generate-creatives", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ jtbd: jtbdRaw.jtbd, productIdea: productIdea.trim() }),
-      });
+      // Step 2: Generate Ad Creatives (asynchronously)
+      setIsGeneratingCreatives(true);
+      try {
+        const creativesRes = await fetch("/api/generate-creatives", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ jtbd: jtbdRaw.jtbd, productIdea: productIdea.trim() }),
+        });
 
-      if (!creativesRes.ok) {
-        const errData = await creativesRes.json().catch(() => ({}));
-        throw new Error(errData.error || "Ошибка при генерации креативов");
+        if (!creativesRes.ok) {
+          const errData = await creativesRes.json().catch(() => ({}));
+          throw new Error(errData.error || "Ошибка при генерации креативов");
+        }
+
+        const creativesRaw = await creativesRes.json() as CreativesApiResponse;
+        const creatives = transformCreatives(creativesRaw);
+        setCreatives(creatives);
+      } catch (creativesErr) {
+        // Don't override the main error if JTBD succeeded
+        console.error("Creatives generation failed:", creativesErr);
+      } finally {
+        setIsGeneratingCreatives(false);
       }
-
-      const creativesRaw = await creativesRes.json() as CreativesApiResponse;
-      const creatives = transformCreatives(creativesRaw);
-      setCreatives(creatives);
-      setShowResults(true);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Неизвестная ошибка");
-    } finally {
       setIsLoading(false);
     }
   };
 
   const handleRetry = () => {
     setError(null);
+    setIsGeneratingCreatives(false);
     handleSubmit({ preventDefault: () => {} } as React.FormEvent);
   };
 
@@ -357,7 +367,7 @@ export default function Home() {
         </section>
 
         {/* Results section */}
-        {showResults && !isLoading && !error && jtbd && creatives && (
+        {showResults && !error && jtbd && (
           <>
             {/* JTBD Section */}
             <section id="jtbd" className="py-12 border-t">
@@ -399,40 +409,52 @@ export default function Home() {
             <section id="creatives" className="py-12 border-t">
               <SectionHeader
                 title="Сгенерированные рекламные креативы"
-                description="Готовые к использованию тексты для рекламных кампаний"
+                description={isGeneratingCreatives ? "Генерируем рекламные тексты..." : "Готовые к использованию тексты для рекламных кампаний"}
               />
-              <div className="grid gap-6">
-                <AdCreativeSection
-                  title="📰 Заголовки (10 вариантов)"
-                  description="Привлекательные заголовки для рекламы"
-                  items={creatives.headlines}
-                  type="headline"
-                />
-                <AdCreativeSection
-                  title="📝 Описания для Google Ads (5 вариантов)"
-                  description="Тексты описаний для рекламных объявлений в Google"
-                  items={creatives.googleAdsDescriptions}
-                  type="description"
-                />
-                <AdCreativeSection
-                  title="📱 Тексты для Meta Ads (5 вариантов)"
-                  description="Рекламные тексты для Facebook, Instagram и других платформ Meta"
-                  items={creatives.metaAdsTexts}
-                  type="description"
-                />
-                <AdCreativeSection
-                  title="🎯 Hero тексты (3 варианта)"
-                  description="Основные промо-тексты для главных экранов и баннеров"
-                  items={creatives.heroTexts}
-                  type="hero"
-                />
-                <AdCreativeSection
-                  title="🚀 Призывы к действию (3 варианта)"
-                  description="Эффективные CTA (Call-to-Action) для увеличения конверсии"
-                  items={creatives.ctaVariations}
-                  type="cta"
-                />
-              </div>
+              {isGeneratingCreatives ? (
+                <LoadingSpinner />
+              ) : creatives ? (
+                <div className="grid gap-6">
+                  <AdCreativeSection
+                    title="📰 Заголовки (10 вариантов)"
+                    description="Привлекательные заголовки для рекламы"
+                    items={creatives.headlines}
+                    type="headline"
+                  />
+                  <AdCreativeSection
+                    title="📝 Описания для Google Ads (5 вариантов)"
+                    description="Тексты описаний для рекламных объявлений в Google"
+                    items={creatives.googleAdsDescriptions}
+                    type="description"
+                  />
+                  <AdCreativeSection
+                    title="📱 Тексты для Meta Ads (5 вариантов)"
+                    description="Рекламные тексты для Facebook, Instagram и других платформ Meta"
+                    items={creatives.metaAdsTexts}
+                    type="description"
+                  />
+                  <AdCreativeSection
+                    title="🎯 Hero тексты (3 варианта)"
+                    description="Основные промо-тексты для главных экранов и баннеров"
+                    items={creatives.heroTexts}
+                    type="hero"
+                  />
+                  <AdCreativeSection
+                    title="🚀 Призывы к действию (3 варианта)"
+                    description="Эффективные CTA (Call-to-Action) для увеличения конверсии"
+                    items={creatives.ctaVariations}
+                    type="cta"
+                  />
+                </div>
+              ) : (
+                <div className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed bg-muted/20 p-12 text-center">
+                  <div className="mb-4 text-5xl">⚠️</div>
+                  <h3 className="text-lg font-semibold">Ошибка генерации креативов</h3>
+                  <p className="mt-2 max-w-md text-muted-foreground">
+                    Не удалось сгенерировать рекламные креативы. Попробуйте снова.
+                  </p>
+                </div>
+              )}
             </section>
           </>
         )}
