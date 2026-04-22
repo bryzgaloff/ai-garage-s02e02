@@ -31,6 +31,7 @@ describe("transformJTBD", () => {
   });
 
   it("handles undefined jtbd object", () => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const result = transformJTBD(undefined as any);
 
     expect(result.jobs).toEqual([]);
@@ -75,6 +76,7 @@ describe("transformJTBD", () => {
         pains: "not an object",
         benefits: { wrong: "format" },
       },
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } as any;
 
     const result = transformJTBD(input);
@@ -118,6 +120,7 @@ describe("transformCreatives", () => {
   });
 
   it("handles undefined creatives object", () => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const result = transformCreatives(undefined as any);
 
     expect(result.headlines).toEqual([]);
@@ -159,6 +162,7 @@ describe("transformCreatives", () => {
         googleAds: "not an array",
         metaAds: { nested: "object" },
       },
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } as any;
 
     const result = transformCreatives(input);

@@ -113,7 +113,7 @@ export async function POST(request: NextRequest) {
     const stream = new ReadableStream({
       async start(controller) {
         // Helper function to send SSE event
-        const sendEvent = (data: any, event?: string) => {
+        const sendEvent = (data: Record<string, unknown>, event?: string) => {
           let message = "data: " + JSON.stringify(data) + "\n\n";
           if (event) {
             message = `event: ${event}\n${message}`;

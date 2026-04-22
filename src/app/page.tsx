@@ -46,14 +46,7 @@ interface PartialJTBD {
   useCases?: string[];
 }
 
-interface JTBDApiResponse {
-  jtbd: {
-    jobs: { functional: string[]; emotional: string[]; social: string[] };
-    pains: { functional: string[]; emotional: string[]; social: string[] };
-    benefits: string[];
-    useCases: string[];
-  };
-}
+
 
 // Types for Ad Creatives
 interface AdHeadline {
@@ -115,12 +108,7 @@ function JTBDSection({ title, description, items, type }: {
   items: Job[] | Pain[] | Benefit[] | UseCase[];
   type: "job" | "pain" | "benefit" | "usecase";
 }) {
-  const typeLabels = {
-    job: "Работа",
-    pain: "Боль",
-    benefit: "Выгода",
-    usecase: "Сценарий использования",
-  };
+
 
   const tagVariants: Record<string, "default" | "functional" | "emotional" | "social"> = {
     functional: "functional",
@@ -259,23 +247,11 @@ function ErrorMessage({ message, onRetry }: { message: string; onRetry: () => vo
   );
 }
 
-// Empty state component
-function EmptyState() {
-  return (
-    <div className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed bg-muted/20 p-12 text-center">
-      <div className="mb-4 text-5xl">🎨</div>
-      <h3 className="text-lg font-semibold">Генератор рекламных креативов</h3>
-      <p className="mt-2 max-w-md text-muted-foreground">
-        Введите описание вашего продукта, и мы создадим для вас получите 10 вариантов рекламных заголовков и тексты объявлений для Google и Meta.
-      </p>
-    </div>
-  );
-}
+
 
 export default function Home() {
   const [productIdea, setProductIdea] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [isGeneratingCreatives, setIsGeneratingCreatives] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [jtbd, setJtbd] = useState<JTBDResponse | null>(null);
   const [partialJtbd, setPartialJtbd] = useState<PartialJTBD>({});
@@ -508,7 +484,6 @@ export default function Home() {
 
   const handleRetry = () => {
     setError(null);
-    setIsGeneratingCreatives(false);
     handleSubmit({ preventDefault: () => {} } as React.FormEvent);
   };
 
