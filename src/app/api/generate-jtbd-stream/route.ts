@@ -53,7 +53,7 @@ function extractArrayFromText(text: string): string[] {
 
 export async function POST(request: NextRequest) {
   const encoder = new TextEncoder();
-  const { productIdea } = await request.json();
+  const { productIdea }: { productIdea: string } = await request.json();
 
   if (!productIdea || typeof productIdea !== "string") {
     return new Response("productIdea is required and must be a string", { status: 400 });
@@ -70,7 +70,7 @@ export async function POST(request: NextRequest) {
     },
   });
 
-  async function sendEvent(eventType: string, data: any) {
+  async function sendEvent(eventType: string, data: Record<string, unknown>) {
     const event = `event: ${eventType}\ndata: ${JSON.stringify(data)}\n\n`;
     controller.enqueue(encoder.encode(event));
   }
