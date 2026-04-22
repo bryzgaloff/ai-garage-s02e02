@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 
 // Types for JTBD data
 interface Job {
@@ -281,6 +282,8 @@ export default function Home() {
   const [partialJtbd, setPartialJtbd] = useState<PartialJTBD>({});
   const [creatives, setCreatives] = useState<AdCreativeResponse | null>(null);
   const [showResults, setShowResults] = useState(false);
+  const [currentStep, setCurrentStep] = useState<string>("");
+  const [openAccordion, setOpenAccordion] = useState<string | undefined>("");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -291,215 +294,91 @@ export default function Home() {
     setJtbd(null);
     setPartialJtbd({});
     setCreatives(null);
-    setShowResults(false);
+    setShowResults(true);
+
+    let accumulatedData: PartialJTBD = {};
+    let jtbdData: JTBDResponse | null = null;
 
     try {
       const productIdeaTrimmed = productIdea.trim();
 
-      // Step 1: Generate functional jobs
-      const functionalRes = await fetch("/api/generate-jtbd-functional", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ productIdea: productIdeaTrimmed }),
-      });
+      const eventSource = new EventSource(`/api/generate-jtbd-stream?productIdea=${encodeURIComponent(productIdeaTrimmed)}`);
 
-      if (!functionalRes.ok) {
-        const errData = await functionalRes.json().catch(() => ({}));
-        throw new Error(errData.error || "Error generating functional jobs");
-      }
+      eventSource.onmessage = (event) => {
+        const data = JSON.parse(event.data);
 
-      const functionalData = await functionalRes.json();
-      setPartialJtbd(prev => ({ ...prev, functionalJobs: functionalData.jobs }));
-      setShowResults(true); // Show partial results
+        if (data.type === 'jobs') {
+          accumulatedData.functionalJobs = data.functional;
+          accumulatedData.emotionalJobs = data.emotional;
+          accumulatedData.socialJobs = data.social;
+          setPartialJtbd({ ...accumulatedData });
+          setCurrentStep('jobs');
+          setOpenAccordion('jobs');
+        } else if (data.type === 'pains') {
+          accumulatedData.functionalPains = data.functional;
+          accumulatedData.emotionalPains = data.emotional;
+          accumulatedData.socialPains = data.social;
+          setPartialJtbd({ ...accumulatedData });
+          setCurrentStep('pains');
+          setOpenAccordion('pains');
+        } else if (data.type === 'benefits') {
+          accumulatedData.benefits = data.benefits;
+          setPartialJtbd({ ...accumulatedData });
+          setCurrentStep('benefits');
+          setOpenAccordion('benefits');
+        } else if (data.type === 'useCases') {
+          accumulatedData.useCases = data.useCases;
+          setPartialJtbd({ ...accumulatedData });
+          setCurrentStep('useCases');
+          setOpenAccordion('useCases');
 
-      // Step 2: Generate emotional jobs
-      const emotionalRes = await fetch("/api/generate-jtbd-emotional", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          productIdea: productIdeaTrimmed,
-          functionalJobs: functionalData.jobs
-        }),
-      });
-
-      if (!emotionalRes.ok) {
-        const errData = await emotionalRes.json().catch(() => ({}));
-        throw new Error(errData.error || "Error generating emotional jobs");
-      }
-
-      const emotionalData = await emotionalRes.json();
-      setPartialJtbd(prev => ({ ...prev, emotionalJobs: emotionalData.jobs }));
-
-      // Step 3: Generate social jobs
-      const socialRes = await fetch("/api/generate-jtbd-social", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          productIdea: productIdeaTrimmed,
-          functionalJobs: functionalData.jobs,
-          emotionalJobs: emotionalData.jobs
-        }),
-      });
-
-      if (!socialRes.ok) {
-        const errData = await socialRes.json().catch(() => ({}));
-        throw new Error(errData.error || "Error generating social jobs");
-      }
-
-      const socialData = await socialRes.json();
-      setPartialJtbd(prev => ({ ...prev, socialJobs: socialData.jobs }));
-
-      const allJobs = [...functionalData.jobs, ...emotionalData.jobs, ...socialData.jobs];
-
-      // Step 4: Generate functional pains
-      const functionalPainsRes = await fetch("/api/generate-jtbd-pains-functional", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          productIdea: productIdeaTrimmed,
-          jobs: allJobs
-        }),
-      });
-
-      if (!functionalPainsRes.ok) {
-        const errData = await functionalPainsRes.json().catch(() => ({}));
-        throw new Error(errData.error || "Error generating functional pains");
-      }
-
-      const functionalPainsData = await functionalPainsRes.json();
-      setPartialJtbd(prev => ({ ...prev, functionalPains: functionalPainsData.pains }));
-
-      // Step 5: Generate emotional pains
-      const emotionalPainsRes = await fetch("/api/generate-jtbd-pains-emotional", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          productIdea: productIdeaTrimmed,
-          jobs: allJobs,
-          functionalPains: functionalPainsData.pains
-        }),
-      });
-
-      if (!emotionalPainsRes.ok) {
-        const errData = await emotionalPainsRes.json().catch(() => ({}));
-        throw new Error(errData.error || "Error generating emotional pains");
-      }
-
-      const emotionalPainsData = await emotionalPainsRes.json();
-      setPartialJtbd(prev => ({ ...prev, emotionalPains: emotionalPainsData.pains }));
-
-      // Step 6: Generate social pains
-      const socialPainsRes = await fetch("/api/generate-jtbd-pains-social", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          productIdea: productIdeaTrimmed,
-          jobs: allJobs
-        }),
-      });
-
-      if (!socialPainsRes.ok) {
-        const errData = await socialPainsRes.json().catch(() => ({}));
-        throw new Error(errData.error || "Error generating social pains");
-      }
-
-      const socialPainsData = await socialPainsRes.json();
-      setPartialJtbd(prev => ({ ...prev, socialPains: socialPainsData.pains }));
-
-      const allPains = [...functionalPainsData.pains, ...emotionalPainsData.pains, ...socialPainsData.pains];
-
-      // Step 7: Generate benefits
-      const benefitsRes = await fetch("/api/generate-jtbd-benefits", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          jobs: allJobs,
-          pains: allPains
-        }),
-      });
-
-      if (!benefitsRes.ok) {
-        const errData = await benefitsRes.json().catch(() => ({}));
-        throw new Error(errData.error || "Error generating benefits");
-      }
-
-      const benefitsData = await benefitsRes.json();
-      setPartialJtbd(prev => ({ ...prev, benefits: benefitsData.benefits }));
-
-      // Step 8: Generate use cases
-      const useCasesRes = await fetch("/api/generate-jtbd-usecases", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          jobs: allJobs,
-          benefits: benefitsData.benefits
-        }),
-      });
-
-      if (!useCasesRes.ok) {
-        const errData = await useCasesRes.json().catch(() => ({}));
-        throw new Error(errData.error || "Error generating use cases");
-      }
-
-      const useCasesData = await useCasesRes.json();
-      setPartialJtbd(prev => ({ ...prev, useCases: useCasesData.useCases }));
-
-      // Convert partial JTBD to full JTBD response
-      const jtbd: JTBDResponse = {
-        jobs: [
-          ...(functionalData.jobs || []).map((text: string, i: number) => ({ id: `job-func-${i}`, text, type: "functional" as const })),
-          ...(emotionalData.jobs || []).map((text: string, i: number) => ({ id: `job-emo-${i}`, text, type: "emotional" as const })),
-          ...(socialData.jobs || []).map((text: string, i: number) => ({ id: `job-soc-${i}`, text, type: "social" as const })),
-        ],
-        pains: [
-          ...(functionalPainsData.pains || []).map((text: string, i: number) => ({ id: `pain-func-${i}`, text, type: "functional" as const })),
-          ...(emotionalPainsData.pains || []).map((text: string, i: number) => ({ id: `pain-emo-${i}`, text, type: "emotional" as const })),
-          ...(socialPainsData.pains || []).map((text: string, i: number) => ({ id: `pain-soc-${i}`, text, type: "social" as const })),
-        ],
-        benefits: (benefitsData.benefits || []).map((text: string, i: number) => ({ id: `benefit-${i}`, text })),
-        useCases: (useCasesData.useCases || []).map((text: string, i: number) => ({ id: `usecase-${i}`, text })),
-      };
-      setJtbd(jtbd);
-      setShowResults(true); // Show JTBD results immediately
-      setIsLoading(false); // Stop main loading
-
-      // Step 9: Generate Ad Creatives
-      const creativesRes = await fetch("/api/generate-creatives", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          jtbd: {
-            jobs: {
-              functional: functionalData.jobs,
-              emotional: emotionalData.jobs,
-              social: socialData.jobs
-            },
-            pains: {
-              functional: functionalPainsData.pains,
-              emotional: emotionalPainsData.pains,
-              social: socialPainsData.pains
-            },
-            benefits: benefitsData.benefits,
-            useCases: useCasesData.useCases
-          },
-          productIdea: productIdeaTrimmed
-        }),
-      });
-
-        if (!creativesRes.ok) {
-          const errData = await creativesRes.json().catch(() => ({}));
-          throw new Error(errData.error || "Error generating creatives");
+          jtbdData = {
+            jobs: [
+              ...(accumulatedData.functionalJobs || []).map((text, i) => ({ id: `job-func-${i}`, text, type: "functional" as const })),
+              ...(accumulatedData.emotionalJobs || []).map((text, i) => ({ id: `job-emo-${i}`, text, type: "emotional" as const })),
+              ...(accumulatedData.socialJobs || []).map((text, i) => ({ id: `job-soc-${i}`, text, type: "social" as const })),
+            ],
+            pains: [
+              ...(accumulatedData.functionalPains || []).map((text, i) => ({ id: `pain-func-${i}`, text, type: "functional" as const })),
+              ...(accumulatedData.emotionalPains || []).map((text, i) => ({ id: `pain-emo-${i}`, text, type: "emotional" as const })),
+              ...(accumulatedData.socialPains || []).map((text, i) => ({ id: `pain-soc-${i}`, text, type: "social" as const })),
+            ],
+            benefits: (accumulatedData.benefits || []).map((text, i) => ({ id: `benefit-${i}`, text })),
+            useCases: (accumulatedData.useCases || []).map((text, i) => ({ id: `usecase-${i}`, text })),
+          };
+          setJtbd(jtbdData);
+        } else if (data.type === 'creatives') {
+          const creatives: AdCreativeResponse = {
+            headlines: (data.creatives?.headlines || []).map((text, i) => ({ id: `hl-${i}`, text })),
+            googleAdsDescriptions: (data.creatives?.googleAds || []).map((text, i) => ({ id: `gad-${i}`, text })),
+            metaAdsTexts: (data.creatives?.metaAds || []).map((text, i) => ({ id: `mad-${i}`, text })),
+            heroTexts: (data.creatives?.heroTexts || []).map((text, i) => ({ id: `hero-${i}`, text })),
+            ctaVariations: (data.creatives?.ctaVariations || []).map((text, i) => ({ id: `cta-${i}`, text })),
+          };
+          setCreatives(creatives);
+          setCurrentStep('creatives');
+          setOpenAccordion('creatives');
+          setIsLoading(false);
+          eventSource.close();
         }
-
-      const creativesRaw = await creativesRes.json();
-      const creatives: AdCreativeResponse = {
-        headlines: (creativesRaw.creatives?.headlines || []).map((text: string, i: number) => ({ id: `hl-${i}`, text })),
-        googleAdsDescriptions: (creativesRaw.creatives?.googleAds || []).map((text: string, i: number) => ({ id: `gad-${i}`, text })),
-        metaAdsTexts: (creativesRaw.creatives?.metaAds || []).map((text: string, i: number) => ({ id: `mad-${i}`, text })),
-        heroTexts: (creativesRaw.creatives?.heroTexts || []).map((text: string, i: number) => ({ id: `hero-${i}`, text })),
-        ctaVariations: (creativesRaw.creatives?.ctaVariations || []).map((text: string, i: number) => ({ id: `cta-${i}`, text })),
       };
-      setCreatives(creatives);
+
+      eventSource.onerror = (error) => {
+        setError("Error generating data");
+        setIsLoading(false);
+        eventSource.close();
+      };
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Unknown error");
+      setIsLoading(false);
+    }
+      };
+
+      eventSource.onerror = (error) => {
+        setError("Error generating data");
+        setIsLoading(false);
+        eventSource.close();
+      };
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unknown error");
       setIsLoading(false);
