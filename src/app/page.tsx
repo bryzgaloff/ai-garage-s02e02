@@ -216,7 +216,7 @@ function LoadingSpinner() {
           AI
         </div>
       </div>
-      <p className="ml-4 text-muted-foreground">Анализируем ваш продукт...</p>
+      <p className="ml-4 text-muted-foreground">Analyzing your product...</p>
     </div>
   );
 }
@@ -242,7 +242,7 @@ function ErrorMessage({ message, onRetry }: { message: string; onRetry: () => vo
             </svg>
           </div>
           <div className="flex-1">
-            <h3 className="font-semibold text-destructive">Произошла ошибка</h3>
+            <h3 className="font-semibold text-destructive">An error occurred</h3>
             <p className="mt-1 text-sm text-muted-foreground">{message}</p>
             <Button
               variant="outline"
@@ -250,7 +250,7 @@ function ErrorMessage({ message, onRetry }: { message: string; onRetry: () => vo
               className="mt-3"
               onClick={onRetry}
             >
-              Попробовать снова
+              Try again
             </Button>
           </div>
         </div>
@@ -264,9 +264,9 @@ function EmptyState() {
   return (
     <div className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed bg-muted/20 p-12 text-center">
       <div className="mb-4 text-5xl">🎨</div>
-      <h3 className="text-lg font-semibold">Генератор рекламных креативов</h3>
+      <h3 className="text-lg font-semibold">Ad Creative Generator</h3>
       <p className="mt-2 max-w-md text-muted-foreground">
-        Enter your product description and we'll generate 10 ad headlines and ad copy for Google and Meta.
+                Enter your product description and we&apos;ll generate 10 ad headlines and ad copy for Google and Meta.
       </p>
     </div>
   );
@@ -305,7 +305,7 @@ export default function Home() {
 
       if (!functionalRes.ok) {
         const errData = await functionalRes.json().catch(() => ({}));
-        throw new Error(errData.error || "Ошибка при генерации функциональных работ");
+        throw new Error(errData.error || "Error generating functional jobs");
       }
 
       const functionalData = await functionalRes.json();
@@ -324,7 +324,7 @@ export default function Home() {
 
       if (!emotionalRes.ok) {
         const errData = await emotionalRes.json().catch(() => ({}));
-        throw new Error(errData.error || "Ошибка при генерации эмоциональных работ");
+        throw new Error(errData.error || "Error generating emotional jobs");
       }
 
       const emotionalData = await emotionalRes.json();
@@ -343,7 +343,7 @@ export default function Home() {
 
       if (!socialRes.ok) {
         const errData = await socialRes.json().catch(() => ({}));
-        throw new Error(errData.error || "Ошибка при генерации социальных работ");
+        throw new Error(errData.error || "Error generating social jobs");
       }
 
       const socialData = await socialRes.json();
@@ -363,7 +363,7 @@ export default function Home() {
 
       if (!functionalPainsRes.ok) {
         const errData = await functionalPainsRes.json().catch(() => ({}));
-        throw new Error(errData.error || "Ошибка при генерации функциональных болей");
+        throw new Error(errData.error || "Error generating functional pains");
       }
 
       const functionalPainsData = await functionalPainsRes.json();
@@ -382,7 +382,7 @@ export default function Home() {
 
       if (!emotionalPainsRes.ok) {
         const errData = await emotionalPainsRes.json().catch(() => ({}));
-        throw new Error(errData.error || "Ошибка при генерации эмоциональных болей");
+        throw new Error(errData.error || "Error generating emotional pains");
       }
 
       const emotionalPainsData = await emotionalPainsRes.json();
@@ -400,7 +400,7 @@ export default function Home() {
 
       if (!socialPainsRes.ok) {
         const errData = await socialPainsRes.json().catch(() => ({}));
-        throw new Error(errData.error || "Ошибка при генерации социальных болей");
+        throw new Error(errData.error || "Error generating social pains");
       }
 
       const socialPainsData = await socialPainsRes.json();
@@ -420,7 +420,7 @@ export default function Home() {
 
       if (!benefitsRes.ok) {
         const errData = await benefitsRes.json().catch(() => ({}));
-        throw new Error(errData.error || "Ошибка при генерации выгод");
+        throw new Error(errData.error || "Error generating benefits");
       }
 
       const benefitsData = await benefitsRes.json();
@@ -438,7 +438,7 @@ export default function Home() {
 
       if (!useCasesRes.ok) {
         const errData = await useCasesRes.json().catch(() => ({}));
-        throw new Error(errData.error || "Ошибка при генерации сценариев использования");
+        throw new Error(errData.error || "Error generating use cases");
       }
 
       const useCasesData = await useCasesRes.json();
@@ -488,7 +488,7 @@ export default function Home() {
 
         if (!creativesRes.ok) {
           const errData = await creativesRes.json().catch(() => ({}));
-          throw new Error(errData.error || "Ошибка при генерации креативов");
+          throw new Error(errData.error || "Error generating creatives");
         }
 
       const creativesRaw = await creativesRes.json();
@@ -501,7 +501,7 @@ export default function Home() {
       };
       setCreatives(creatives);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Неизвестная ошибка");
+      setError(err instanceof Error ? err.message : "Unknown error");
       setIsLoading(false);
     }
   };
@@ -547,13 +547,13 @@ export default function Home() {
           </div>
           <nav className="hidden md:flex gap-6">
             <a href="#input" className="text-sm font-medium hover:text-primary">
-              Ввод
+              Input
             </a>
             <a href="#jtbd" className="text-sm font-medium hover:text-primary">
               JTBD
             </a>
             <a href="#creatives" className="text-sm font-medium hover:text-primary">
-              Креативы
+              Creatives
             </a>
           </nav>
         </div>
@@ -566,10 +566,10 @@ export default function Home() {
           <div className="mx-auto max-w-3xl">
             <div className="text-center mb-8">
               <h1 className="text-4xl font-bold tracking-tight mb-4">
-                Введи описание своего продукта
+        Enter your product description and we&apos;ll generate 10 ad headlines and ad copy for Google and Meta.
               </h1>
               <p className="text-xl text-muted-foreground">
-                получи 10 вариантов рекламных заголовков + тексты объявлений для Google/Meta
+                get 10 ad headline variants + ad copy for Google/Meta
               </p>
             </div>
 
@@ -578,12 +578,12 @@ export default function Home() {
                 <Textarea
                   value={productIdea}
                   onChange={(e) => setProductIdea(e.target.value)}
-                  placeholder="Опишите ваш продукт, целевую аудиторию, основные преимущества..."
+                  placeholder="Describe your product, target audience, main advantages..."
                   rows={5}
                   className="resize-none text-base"
                 />
                 <p className="mt-2 text-xs text-muted-foreground">
-                  Чем подробнее описание, тем лучше результат
+                  The more detailed the description, the better the results
                 </p>
               </div>
               <div className="flex justify-end">
@@ -595,10 +595,10 @@ export default function Home() {
                   {isLoading ? (
                     <>
                       <div className="mr-2 size-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                      Генерация...
+                      Generating...
                     </>
                   ) : (
-                    "Сгенерировать креативы"
+                    "Generate Creatives"
                   )}
                 </Button>
               </div>
@@ -619,33 +619,33 @@ export default function Home() {
             {displayJtbd && (
               <section id="jtbd" className="py-12 border-t">
                 <SectionHeader
-                  title="Анализ Jobs To Be Done"
-                  description={jtbd ? "Определены ключевые работы, боли, выгоды и сценарии использования" : "Анализ выполняется поэтапно..."}
+                  title="Jobs To Be Done Analysis"
+                  description={jtbd ? "Key jobs, pains, benefits, and use cases identified" : "Analysis is running in stages..."}
                 />
                 <div className="grid gap-6 md:grid-cols-2">
                   <JTBDSection
-                    title="🎯 Работы (Jobs)"
-                    description="Функциональные, эмоциональные и социальные работы, которые выполняет продукт"
+                    title="🎯 Jobs"
+                    description="Functional, emotional, and social jobs that the product performs"
                     items={displayJtbd.jobs}
                     type="job"
                   />
                   <JTBDSection
-                    title="💢 Боли (Pains)"
-                    description="Функциональные, эмоциональные и социальные боли клиентов"
+                    title="💢 Pains"
+                    description="Functional, emotional, and social customer pains"
                     items={displayJtbd.pains}
                     type="pain"
                   />
                 </div>
                 <div className="grid gap-6 md:grid-cols-2 mt-6">
                   <JTBDSection
-                    title="✅ Выгоды (Benefits)"
-                    description="Ключевые преимущества и ценности продукта"
+                    title="✅ Benefits"
+                    description="Key product advantages and values"
                     items={displayJtbd.benefits}
                     type="benefit"
                   />
                   <JTBDSection
-                    title="📋 Сценарии использования"
-                    description="Конкретные ситуации применения продукта"
+                    title="📋 Use Cases"
+                    description="Specific product usage situations"
                     items={displayJtbd.useCases}
                     type="usecase"
                   />
@@ -657,37 +657,37 @@ export default function Home() {
             {jtbd && creatives && (
               <section id="creatives" className="py-12 border-t">
                 <SectionHeader
-                  title="Сгенерированные рекламные креативы"
-                  description="Готовые к использованию тексты для рекламных кампаний"
+                  title="Generated Ad Creatives"
+                  description="Ready-to-use texts for advertising campaigns"
                 />
                 <div className="grid gap-6">
                   <AdCreativeSection
-                    title="📰 Заголовки (10 вариантов)"
-                    description="Привлекательные заголовки для рекламы"
+                    title="📰 Headlines (10 variants)"
+                    description="Attractive headlines for advertising"
                     items={creatives.headlines}
                     type="headline"
                   />
                   <AdCreativeSection
-                    title="📝 Описания для Google Ads (5 вариантов)"
-                    description="Тексты описаний для рекламных объявлений в Google"
+                    title="📝 Google Ads Descriptions (5 variants)"
+                    description="Description texts for Google advertisements"
                     items={creatives.googleAdsDescriptions}
                     type="description"
                   />
                   <AdCreativeSection
-                    title="📱 Тексты для Meta Ads (5 вариантов)"
-                    description="Рекламные тексты для Facebook, Instagram и других платформ Meta"
+                    title="📱 Meta Ads Texts (5 variants)"
+                    description="Advertising texts for Facebook, Instagram and other Meta platforms"
                     items={creatives.metaAdsTexts}
                     type="description"
                   />
                   <AdCreativeSection
-                    title="🎯 Hero тексты (3 варианта)"
-                    description="Основные промо-тексты для главных экранов и баннеров"
+                    title="🎯 Hero Texts (3 variants)"
+                    description="Main promo texts for main screens and banners"
                     items={creatives.heroTexts}
                     type="hero"
                   />
                   <AdCreativeSection
-                    title="🚀 Призывы к действию (3 варианта)"
-                    description="Эффективные CTA (Call-to-Action) для увеличения конверсии"
+                    title="🚀 Calls to Action (3 variants)"
+                    description="Effective CTA (Call-to-Action) for increasing conversion"
                     items={creatives.ctaVariations}
                     type="cta"
                   />
@@ -702,7 +702,7 @@ export default function Home() {
       {/* Footer */}
       <footer className="border-t py-8 mt-12">
         <div className="container mx-auto px-4 text-center text-muted-foreground">
-          <p>&copy; 2026 AdCreative Generator. Все права защищены.</p>
+          <p>&copy; 2026 AdCreative Generator. All rights reserved.</p>
         </div>
       </footer>
     </div>
