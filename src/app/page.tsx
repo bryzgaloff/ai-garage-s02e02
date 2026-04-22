@@ -207,20 +207,7 @@ function AdCreativeSection({ title, description, items, type }: {
   );
 }
 
-// Loading spinner component
-function LoadingSpinner() {
-  return (
-    <div className="flex items-center justify-center py-12">
-      <div className="relative">
-        <div className="h-12 w-12 animate-spin rounded-full border-4 border-muted border-t-primary"></div>
-        <div className="absolute inset-0 flex items-center justify-center text-xs font-bold text-primary">
-          AI
-        </div>
-      </div>
-      <p className="ml-4 text-muted-foreground">Анализируем ваш продукт...</p>
-    </div>
-  );
-}
+
 
 // Error message component
 function ErrorMessage({ message, onRetry }: { message: string; onRetry: () => void }) {
@@ -305,29 +292,33 @@ export default function Home() {
 
       const eventSource = new EventSource(`/api/generate-jtbd-stream?productIdea=${encodeURIComponent(productIdeaTrimmed)}`);
 
+      eventSource.onopen = () => {
+        // Connection established
+      };
+
       eventSource.onmessage = (event) => {
         const data = JSON.parse(event.data);
 
-        if (data.type === 'jobs') {
+        if (event.type === 'jobs') {
           accumulatedData.functionalJobs = data.functional;
           accumulatedData.emotionalJobs = data.emotional;
           accumulatedData.socialJobs = data.social;
           setPartialJtbd({ ...accumulatedData });
           setCurrentStep('jobs');
           setOpenAccordion('jobs');
-        } else if (data.type === 'pains') {
+        } else if (event.type === 'pains') {
           accumulatedData.functionalPains = data.functional;
           accumulatedData.emotionalPains = data.emotional;
           accumulatedData.socialPains = data.social;
           setPartialJtbd({ ...accumulatedData });
           setCurrentStep('pains');
           setOpenAccordion('pains');
-        } else if (data.type === 'benefits') {
+        } else if (event.type === 'benefits') {
           accumulatedData.benefits = data.benefits;
           setPartialJtbd({ ...accumulatedData });
           setCurrentStep('benefits');
           setOpenAccordion('benefits');
-        } else if (data.type === 'useCases') {
+        } else if (event.type === 'useCases') {
           accumulatedData.useCases = data.useCases;
           setPartialJtbd({ ...accumulatedData });
           setCurrentStep('useCases');
@@ -349,7 +340,7 @@ export default function Home() {
             useCases: (accumulatedData.useCases || []).map((text: string, i: number) => ({ id: `usecase-${i}`, text })),
           };
           setJtbd(jtbdData);
-        } else if (data.type === 'creatives') {
+        } else if (event.type === 'creatives') {
           const creatives: AdCreativeResponse = {
             headlines: (data.creatives?.headlines || []).map((text: string, i: number) => ({ id: `hl-${i}`, text })),
             googleAdsDescriptions: (data.creatives?.googleAds || []).map((text: string, i: number) => ({ id: `gad-${i}`, text })),
@@ -474,7 +465,7 @@ export default function Home() {
               </div>
             </form>
 
-            {isLoading && <LoadingSpinner />}
+
 
             {error && <ErrorMessage message={error} onRetry={handleRetry} />}
           </div>
