@@ -266,7 +266,7 @@ function EmptyState() {
       <div className="mb-4 text-5xl">🎨</div>
       <h3 className="text-lg font-semibold">Генератор рекламных креативов</h3>
       <p className="mt-2 max-w-md text-muted-foreground">
-        Введите описание вашего продукта, и мы создадим для вас получите 10 вариантов рекламных заголовков и тексты объявлений для Google и Meta.
+        Enter your product description and we'll generate 10 ad headlines and ad copy for Google and Meta.
       </p>
     </div>
   );
