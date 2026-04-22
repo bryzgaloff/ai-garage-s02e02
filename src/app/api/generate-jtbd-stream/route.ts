@@ -51,51 +51,34 @@ function extractArrayFromText(text: string): string[] {
   return [];
 }
 
-export async function POST(request: NextRequest) {
+async function generateJTBDStream(productIdea: string, controller: ReadableStreamDefaultController) {
   const encoder = new TextEncoder();
-  const { productIdea }: { productIdea: string } = await request.json();
-
-  if (!productIdea || typeof productIdea !== "string") {
-    return new Response("productIdea is required and must be a string", { status: 400 });
-  }
-
-  let controller: ReadableStreamDefaultController;
-
-  const stream = new ReadableStream({
-    start(controllerParam) {
-      controller = controllerParam;
-    },
-    cancel() {
-      // Handle cancellation if needed
-    },
-  });
 
   async function sendEvent(eventType: string, data: Record<string, unknown>) {
     const event = `event: ${eventType}\ndata: ${JSON.stringify(data)}\n\n`;
     controller.enqueue(encoder.encode(event));
   }
 
-  async function generateAll() {
-    try {
-      // Step 1: Generate functional jobs
-      await sendEvent("jobs", { status: "generating" });
+  try {
+    // Step 1: Generate functional jobs
+    await sendEvent("jobs", { status: "generating" });
 
-      const functionalJobsPrompt = `Analyze this product idea and identify the Jobs-to-be-done. A Job represents a task or problem a customer hires the product to solve.
+    const functionalJobsPrompt = `Analyze this product idea and identify the Jobs-to-be-done. A Job represents a task or problem a customer hires the product to solve.
 
 Product: ${productIdea}
 
 List the functional jobs (core tasks customers need to accomplish):
 - `;
 
-      const functionalJobsContent = await chatWithRetry([
-        { role: "system", content: "You are a product strategy expert. Analyze products and identify Jobs-to-be-done. Provide concise bullet points." },
-        { role: "user", content: functionalJobsPrompt },
-      ]);
+    const functionalJobsContent = await chatWithRetry([
+      { role: "system", content: "You are a product strategy expert. Analyze products and identify Jobs-to-be-done. Provide concise bullet points." },
+      { role: "user", content: functionalJobsPrompt },
+    ]);
 
-      const functionalJobs = extractArrayFromText(functionalJobsContent);
+    const functionalJobs = extractArrayFromText(functionalJobsContent);
 
-      // Step 2: Generate emotional jobs
-      const emotionalJobsPrompt = `Based on this product idea and the functional jobs already identified, identify the emotional jobs.
+    // Step 2: Generate emotional jobs
+    const emotionalJobsPrompt = `Based on this product idea and the functional jobs already identified, identify the emotional jobs.
 
 Product: ${productIdea}
 Functional Jobs: ${functionalJobs.join(", ")}
@@ -103,15 +86,15 @@ Functional Jobs: ${functionalJobs.join(", ")}
 List the emotional jobs (feelings or emotional outcomes customers seek):
 - `;
 
-      const emotionalJobsContent = await chatWithRetry([
-        { role: "system", content: "You are a product strategy expert. Focus on emotional aspects of Jobs-to-be-done." },
-        { role: "user", content: emotionalJobsPrompt },
-      ]);
+    const emotionalJobsContent = await chatWithRetry([
+      { role: "system", content: "You are a product strategy expert. Focus on emotional aspects of Jobs-to-be-done." },
+      { role: "user", content: emotionalJobsPrompt },
+    ]);
 
-      const emotionalJobs = extractArrayFromText(emotionalJobsContent);
+    const emotionalJobs = extractArrayFromText(emotionalJobsContent);
 
-      // Step 3: Generate social jobs
-      const socialJobsPrompt = `Based on this product idea and the jobs already identified, identify the social jobs.
+    // Step 3: Generate social jobs
+    const socialJobsPrompt = `Based on this product idea and the jobs already identified, identify the social jobs.
 
 Product: ${productIdea}
 Functional Jobs: ${functionalJobs.join(", ")}
@@ -120,25 +103,25 @@ Emotional Jobs: ${emotionalJobs.join(", ")}
 List the social jobs (social recognition or relationships customers seek):
 - `;
 
-      const socialJobsContent = await chatWithRetry([
-        { role: "system", content: "You are a product strategy expert. Focus on social aspects of Jobs-to-be-done." },
-        { role: "user", content: socialJobsPrompt },
-      ]);
+    const socialJobsContent = await chatWithRetry([
+      { role: "system", content: "You are a product strategy expert. Focus on social aspects of Jobs-to-be-done." },
+      { role: "user", content: socialJobsPrompt },
+    ]);
 
-      const socialJobs = extractArrayFromText(socialJobsContent);
+    const socialJobs = extractArrayFromText(socialJobsContent);
 
-      const allJobs = [...functionalJobs, ...emotionalJobs, ...socialJobs];
+    const allJobs = [...functionalJobs, ...emotionalJobs, ...socialJobs];
 
-      await sendEvent("jobs", {
-        functional: functionalJobs,
-        emotional: emotionalJobs,
-        social: socialJobs
-      });
+    await sendEvent("jobs", {
+      functional: functionalJobs,
+      emotional: emotionalJobs,
+      social: socialJobs
+    });
 
-      // Step 4: Generate pains
-      await sendEvent("pains", { status: "generating" });
+    // Step 4: Generate pains
+    await sendEvent("pains", { status: "generating" });
 
-      const functionalPainsPrompt = `Based on the product idea and identified jobs, identify the functional pains.
+    const functionalPainsPrompt = `Based on the product idea and identified jobs, identify the functional pains.
 
 Product: ${productIdea}
 Jobs: ${allJobs.join(", ")}
@@ -146,14 +129,14 @@ Jobs: ${allJobs.join(", ")}
 List the functional pains (practical problems or obstacles customers face):
 - `;
 
-      const functionalPainsContent = await chatWithRetry([
-        { role: "system", content: "You are a product strategy expert. Focus on functional pains in Jobs-to-be-done." },
-        { role: "user", content: functionalPainsPrompt },
-      ]);
+    const functionalPainsContent = await chatWithRetry([
+      { role: "system", content: "You are a product strategy expert. Focus on functional pains in Jobs-to-be-done." },
+      { role: "user", content: functionalPainsPrompt },
+    ]);
 
-      const functionalPains = extractArrayFromText(functionalPainsContent);
+    const functionalPains = extractArrayFromText(functionalPainsContent);
 
-      const emotionalPainsPrompt = `Based on the product idea, jobs, and functional pains, identify the emotional pains.
+    const emotionalPainsPrompt = `Based on the product idea, jobs, and functional pains, identify the emotional pains.
 
 Product: ${productIdea}
 Jobs: ${allJobs.join(", ")}
@@ -162,14 +145,14 @@ Functional Pains: ${functionalPains.join(", ")}
 List the emotional pains (frustrations or negative feelings customers experience):
 - `;
 
-      const emotionalPainsContent = await chatWithRetry([
-        { role: "system", content: "You are a product strategy expert. Focus on emotional pains in Jobs-to-be-done." },
-        { role: "user", content: emotionalPainsPrompt },
-      ]);
+    const emotionalPainsContent = await chatWithRetry([
+      { role: "system", content: "You are a product strategy expert. Focus on emotional pains in Jobs-to-be-done." },
+      { role: "user", content: emotionalPainsPrompt },
+    ]);
 
-      const emotionalPains = extractArrayFromText(emotionalPainsContent);
+    const emotionalPains = extractArrayFromText(emotionalPainsContent);
 
-      const socialPainsPrompt = `Based on the product idea, jobs, and other pains, identify the social pains.
+    const socialPainsPrompt = `Based on the product idea, jobs, and other pains, identify the social pains.
 
 Product: ${productIdea}
 Jobs: ${allJobs.join(", ")}
@@ -179,25 +162,25 @@ Emotional Pains: ${emotionalPains.join(", ")}
 List the social pains (social challenges or relationship issues customers face):
 - `;
 
-      const socialPainsContent = await chatWithRetry([
-        { role: "system", content: "You are a product strategy expert. Focus on social pains in Jobs-to-be-done." },
-        { role: "user", content: socialPainsPrompt },
-      ]);
+    const socialPainsContent = await chatWithRetry([
+      { role: "system", content: "You are a product strategy expert. Focus on social pains in Jobs-to-be-done." },
+      { role: "user", content: socialPainsPrompt },
+    ]);
 
-      const socialPains = extractArrayFromText(socialPainsContent);
+    const socialPains = extractArrayFromText(socialPainsContent);
 
-      const allPains = [...functionalPains, ...emotionalPains, ...socialPains];
+    const allPains = [...functionalPains, ...emotionalPains, ...socialPains];
 
-      await sendEvent("pains", {
-        functional: functionalPains,
-        emotional: emotionalPains,
-        social: socialPains
-      });
+    await sendEvent("pains", {
+      functional: functionalPains,
+      emotional: emotionalPains,
+      social: socialPains
+    });
 
-      // Step 5: Generate benefits
-      await sendEvent("benefits", { status: "generating" });
+    // Step 5: Generate benefits
+    await sendEvent("benefits", { status: "generating" });
 
-      const benefitsPrompt = `Based on the product idea, jobs, and pains, identify the key benefits.
+    const benefitsPrompt = `Based on the product idea, jobs, and pains, identify the key benefits.
 
 Product: ${productIdea}
 Jobs: ${allJobs.join(", ")}
@@ -206,19 +189,19 @@ Pains: ${allPains.join(", ")}
 List the key benefits (advantages or positive outcomes customers will experience):
 - `;
 
-      const benefitsContent = await chatWithRetry([
-        { role: "system", content: "You are a product strategy expert. Focus on benefits in Jobs-to-be-done." },
-        { role: "user", content: benefitsPrompt },
-      ]);
+    const benefitsContent = await chatWithRetry([
+      { role: "system", content: "You are a product strategy expert. Focus on benefits in Jobs-to-be-done." },
+      { role: "user", content: benefitsPrompt },
+    ]);
 
-      const benefits = extractArrayFromText(benefitsContent);
+    const benefits = extractArrayFromText(benefitsContent);
 
-      await sendEvent("benefits", { benefits });
+    await sendEvent("benefits", { benefits });
 
-      // Step 6: Generate use cases
-      await sendEvent("useCases", { status: "generating" });
+    // Step 6: Generate use cases
+    await sendEvent("useCases", { status: "generating" });
 
-      const useCasesPrompt = `Based on the product idea, jobs, pains, and benefits, identify specific use cases.
+    const useCasesPrompt = `Based on the product idea, jobs, pains, and benefits, identify specific use cases.
 
 Product: ${productIdea}
 Jobs: ${allJobs.join(", ")}
@@ -228,19 +211,19 @@ Benefits: ${benefits.join(", ")}
 List specific use cases (concrete scenarios where customers would use this product):
 - `;
 
-      const useCasesContent = await chatWithRetry([
-        { role: "system", content: "You are a product strategy expert. Focus on use cases in Jobs-to-be-done." },
-        { role: "user", content: useCasesPrompt },
-      ]);
+    const useCasesContent = await chatWithRetry([
+      { role: "system", content: "You are a product strategy expert. Focus on use cases in Jobs-to-be-done." },
+      { role: "user", content: useCasesPrompt },
+    ]);
 
-      const useCases = extractArrayFromText(useCasesContent);
+    const useCases = extractArrayFromText(useCasesContent);
 
-      await sendEvent("useCases", { useCases });
+    await sendEvent("useCases", { useCases });
 
-      // Step 7: Generate creatives
-      await sendEvent("creatives", { status: "generating" });
+    // Step 7: Generate creatives
+    await sendEvent("creatives", { status: "generating" });
 
-      const creativesPrompt = `Based on the complete JTBD analysis, generate advertising creatives.
+    const creativesPrompt = `Based on the complete JTBD analysis, generate advertising creatives.
 
 Product: ${productIdea}
 
@@ -265,40 +248,81 @@ Then generate 3 hero texts for landing pages:
 Then generate 3 call-to-action variations:
 - `;
 
-      const creativesContent = await chatWithRetry([
-        { role: "system", content: "You are a creative advertising copywriter. Generate compelling ad copy based on JTBD analysis." },
-        { role: "user", content: creativesPrompt },
-      ]);
+    const creativesContent = await chatWithRetry([
+      { role: "system", content: "You are a creative advertising copywriter. Generate compelling ad copy based on JTBD analysis." },
+      { role: "user", content: creativesPrompt },
+    ]);
 
-      // Parse the creatives response
-      const sections = creativesContent.split("\n\n").filter(s => s.trim());
-      const headlines = extractArrayFromText(sections[0] || "");
-      const googleAds = extractArrayFromText(sections[1] || "");
-      const metaAds = extractArrayFromText(sections[2] || "");
-      const heroTexts = extractArrayFromText(sections[3] || "");
-      const ctaVariations = extractArrayFromText(sections[4] || "");
+    // Parse the creatives response
+    const sections = creativesContent.split("\n\n").filter(s => s.trim());
+    const headlines = extractArrayFromText(sections[0] || "");
+    const googleAds = extractArrayFromText(sections[1] || "");
+    const metaAds = extractArrayFromText(sections[2] || "");
+    const heroTexts = extractArrayFromText(sections[3] || "");
+    const ctaVariations = extractArrayFromText(sections[4] || "");
 
-      await sendEvent("creatives", {
-        headlines,
-        googleAdsDescriptions: googleAds,
-        metaAdsTexts: metaAds,
-        heroTexts,
-        ctaVariations
-      });
+    await sendEvent("creatives", {
+      headlines,
+      googleAdsDescriptions: googleAds,
+      metaAdsTexts: metaAds,
+      heroTexts,
+      ctaVariations
+    });
 
-      // Send completion event
-      await sendEvent("complete", {});
+    // Send completion event
+    await sendEvent("complete", {});
 
-    } catch (error) {
-      console.error("JTBD generation error:", error);
-      await sendEvent("error", { message: error instanceof Error ? error.message : "Unknown error" });
-    } finally {
-      controller.close();
-    }
+  } catch (error) {
+    console.error("JTBD generation error:", error);
+    await sendEvent("error", { message: error instanceof Error ? error.message : "Unknown error" });
+  } finally {
+    controller.close();
+  }
+}
+
+export async function GET(request: NextRequest) {
+  const { searchParams } = new URL(request.url);
+  const productIdea = searchParams.get("productIdea");
+
+  if (!productIdea || typeof productIdea !== "string") {
+    return new Response("productIdea is required and must be a string", { status: 400 });
   }
 
-  // Start the generation process asynchronously
-  generateAll();
+  const stream = new ReadableStream({
+    start(controller) {
+      // Start the generation process asynchronously
+      generateJTBDStream(productIdea, controller);
+    },
+    cancel() {
+      // Handle cancellation if needed
+    },
+  });
+
+  return new Response(stream, {
+    headers: {
+      "Content-Type": "text/event-stream",
+      "Cache-Control": "no-cache",
+      "Connection": "keep-alive",
+    },
+  });
+}
+
+export async function POST(request: NextRequest) {
+  const { productIdea }: { productIdea: string } = await request.json();
+
+  if (!productIdea || typeof productIdea !== "string") {
+    return new Response("productIdea is required and must be a string", { status: 400 });
+  }
+
+  const stream = new ReadableStream({
+    start(controller) {
+      // Start the generation process asynchronously
+      generateJTBDStream(productIdea, controller);
+    },
+    cancel() {
+      // Handle cancellation if needed
+    },
+  });
 
   return new Response(stream, {
     headers: {
