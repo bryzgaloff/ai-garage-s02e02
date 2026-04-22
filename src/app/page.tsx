@@ -207,20 +207,7 @@ function AdCreativeSection({ title, description, items, type }: {
   );
 }
 
-// Loading spinner component
-function LoadingSpinner() {
-  return (
-    <div className="flex items-center justify-center py-12">
-      <div className="relative">
-        <div className="h-12 w-12 animate-spin rounded-full border-4 border-muted border-t-primary"></div>
-        <div className="absolute inset-0 flex items-center justify-center text-xs font-bold text-primary">
-          AI
-        </div>
-      </div>
-      <p className="ml-4 text-muted-foreground">Анализируем ваш продукт...</p>
-    </div>
-  );
-}
+
 
 // Error message component
 function ErrorMessage({ message, onRetry }: { message: string; onRetry: () => void }) {
@@ -300,74 +287,79 @@ export default function Home() {
       const productIdeaTrimmed = productIdea.trim();
       setShowResults(true);
 
-      let accumulatedData: PartialJTBD = {};
+      const accumulatedData: PartialJTBD = {};
       let jtbdData: JTBDResponse | null = null;
 
       const eventSource = new EventSource(`/api/generate-jtbd-stream?productIdea=${encodeURIComponent(productIdeaTrimmed)}`);
 
-      eventSource.onopen = () => {
-        // Connection established
-      };
-
-      eventSource.onmessage = (event) => {
+      eventSource.addEventListener('jobs', (event) => {
         const data = JSON.parse(event.data);
+        accumulatedData.functionalJobs = data.functional;
+        accumulatedData.emotionalJobs = data.emotional;
+        accumulatedData.socialJobs = data.social;
+        setPartialJtbd({ ...accumulatedData });
+        setCurrentStep('jobs');
+        setOpenAccordion('jobs');
+      });
 
-        if (data.type === 'jobs') {
-          accumulatedData.functionalJobs = data.functional;
-          accumulatedData.emotionalJobs = data.emotional;
-          accumulatedData.socialJobs = data.social;
-          setPartialJtbd({ ...accumulatedData });
-          setCurrentStep('jobs');
-          setOpenAccordion('jobs');
-        } else if (data.type === 'pains') {
-          accumulatedData.functionalPains = data.functional;
-          accumulatedData.emotionalPains = data.emotional;
-          accumulatedData.socialPains = data.social;
-          setPartialJtbd({ ...accumulatedData });
-          setCurrentStep('pains');
-          setOpenAccordion('pains');
-        } else if (data.type === 'benefits') {
-          accumulatedData.benefits = data.benefits;
-          setPartialJtbd({ ...accumulatedData });
-          setCurrentStep('benefits');
-          setOpenAccordion('benefits');
-        } else if (data.type === 'useCases') {
-          accumulatedData.useCases = data.useCases;
-          setPartialJtbd({ ...accumulatedData });
-          setCurrentStep('useCases');
-          setOpenAccordion('useCases');
+      eventSource.addEventListener('pains', (event) => {
+        const data = JSON.parse(event.data);
+        accumulatedData.functionalPains = data.functional;
+        accumulatedData.emotionalPains = data.emotional;
+        accumulatedData.socialPains = data.social;
+        setPartialJtbd({ ...accumulatedData });
+        setCurrentStep('pains');
+        setOpenAccordion('pains');
+      });
 
-          // Convert to full JTBD response
-          jtbdData = {
-            jobs: [
-              ...(accumulatedData.functionalJobs || []).map((text: string, i: number) => ({ id: `job-func-${i}`, text, type: "functional" as const })),
-              ...(accumulatedData.emotionalJobs || []).map((text: string, i: number) => ({ id: `job-emo-${i}`, text, type: "emotional" as const })),
-              ...(accumulatedData.socialJobs || []).map((text: string, i: number) => ({ id: `job-soc-${i}`, text, type: "social" as const })),
-            ],
-            pains: [
-              ...(accumulatedData.functionalPains || []).map((text: string, i: number) => ({ id: `pain-func-${i}`, text, type: "functional" as const })),
-              ...(accumulatedData.emotionalPains || []).map((text: string, i: number) => ({ id: `pain-emo-${i}`, text, type: "emotional" as const })),
-              ...(accumulatedData.socialPains || []).map((text: string, i: number) => ({ id: `pain-soc-${i}`, text, type: "social" as const })),
-            ],
-            benefits: (accumulatedData.benefits || []).map((text: string, i: number) => ({ id: `benefit-${i}`, text })),
-            useCases: (accumulatedData.useCases || []).map((text: string, i: number) => ({ id: `usecase-${i}`, text })),
-          };
-          setJtbd(jtbdData);
-        } else if (data.type === 'creatives') {
-          const creatives: AdCreativeResponse = {
-            headlines: (data.creatives?.headlines || []).map((text: string, i: number) => ({ id: `hl-${i}`, text })),
-            googleAdsDescriptions: (data.creatives?.googleAds || []).map((text: string, i: number) => ({ id: `gad-${i}`, text })),
-            metaAdsTexts: (data.creatives?.metaAds || []).map((text: string, i: number) => ({ id: `mad-${i}`, text })),
-            heroTexts: (data.creatives?.heroTexts || []).map((text: string, i: number) => ({ id: `hero-${i}`, text })),
-            ctaVariations: (data.creatives?.ctaVariations || []).map((text: string, i: number) => ({ id: `cta-${i}`, text })),
-          };
-          setCreatives(creatives);
-          setCurrentStep('creatives');
-          setOpenAccordion('creatives');
-          setIsLoading(false);
-          eventSource.close();
-        }
-      };
+      eventSource.addEventListener('benefits', (event) => {
+        const data = JSON.parse(event.data);
+        accumulatedData.benefits = data.benefits;
+        setPartialJtbd({ ...accumulatedData });
+        setCurrentStep('benefits');
+        setOpenAccordion('benefits');
+      });
+
+      eventSource.addEventListener('useCases', (event) => {
+        const data = JSON.parse(event.data);
+        accumulatedData.useCases = data.useCases;
+        setPartialJtbd({ ...accumulatedData });
+        setCurrentStep('useCases');
+        setOpenAccordion('useCases');
+
+        // Convert to full JTBD response
+        jtbdData = {
+          jobs: [
+            ...(accumulatedData.functionalJobs || []).map((text: string, i: number) => ({ id: `job-func-${i}`, text, type: "functional" as const })),
+            ...(accumulatedData.emotionalJobs || []).map((text: string, i: number) => ({ id: `job-emo-${i}`, text, type: "emotional" as const })),
+            ...(accumulatedData.socialJobs || []).map((text: string, i: number) => ({ id: `job-soc-${i}`, text, type: "social" as const })),
+          ],
+          pains: [
+            ...(accumulatedData.functionalPains || []).map((text: string, i: number) => ({ id: `pain-func-${i}`, text, type: "functional" as const })),
+            ...(accumulatedData.emotionalPains || []).map((text: string, i: number) => ({ id: `pain-emo-${i}`, text, type: "emotional" as const })),
+            ...(accumulatedData.socialPains || []).map((text: string, i: number) => ({ id: `pain-soc-${i}`, text, type: "social" as const })),
+          ],
+          benefits: (accumulatedData.benefits || []).map((text: string, i: number) => ({ id: `benefit-${i}`, text })),
+          useCases: (accumulatedData.useCases || []).map((text: string, i: number) => ({ id: `usecase-${i}`, text })),
+        };
+        setJtbd(jtbdData);
+      });
+
+      eventSource.addEventListener('creatives', (event) => {
+        const data = JSON.parse(event.data);
+        const creatives: AdCreativeResponse = {
+          headlines: (data.creatives?.headlines || []).map((text: string, i: number) => ({ id: `hl-${i}`, text })),
+          googleAdsDescriptions: (data.creatives?.googleAds || []).map((text: string, i: number) => ({ id: `gad-${i}`, text })),
+          metaAdsTexts: (data.creatives?.metaAds || []).map((text: string, i: number) => ({ id: `mad-${i}`, text })),
+          heroTexts: (data.creatives?.heroTexts || []).map((text: string, i: number) => ({ id: `hero-${i}`, text })),
+          ctaVariations: (data.creatives?.ctaVariations || []).map((text: string, i: number) => ({ id: `cta-${i}`, text })),
+        };
+        setCreatives(creatives);
+        setCurrentStep('creatives');
+        setOpenAccordion('creatives');
+        setIsLoading(false);
+        eventSource.close();
+      });
 
       eventSource.onerror = (error) => {
         setError("Ошибка при генерации данных");
@@ -478,7 +470,7 @@ export default function Home() {
               </div>
             </form>
 
-            {isLoading && <LoadingSpinner />}
+
 
             {error && <ErrorMessage message={error} onRetry={handleRetry} />}
           </div>
