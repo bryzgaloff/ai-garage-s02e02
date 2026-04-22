@@ -4,20 +4,75 @@ import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  transformJTBD,
-  transformCreatives,
-  JTBDResponse,
-  JTBDApiResponse,
-  AdCreativeResponse,
-  CreativesApiResponse,
-  Job,
-  Pain,
-  Benefit,
-  UseCase,
-  AdHeadline,
-  AdDescription,
-} from "@/lib/transform";
+
+// Types for JTBD data
+interface Job {
+  id: string;
+  text: string;
+  type: "functional" | "emotional" | "social";
+}
+
+interface Pain {
+  id: string;
+  text: string;
+  type: "functional" | "emotional" | "social";
+}
+
+interface Benefit {
+  id: string;
+  text: string;
+}
+
+interface UseCase {
+  id: string;
+  text: string;
+}
+
+interface JTBDResponse {
+  jobs: Job[];
+  pains: Pain[];
+  benefits: Benefit[];
+  useCases: UseCase[];
+}
+
+interface PartialJTBD {
+  functionalJobs?: string[];
+  emotionalJobs?: string[];
+  socialJobs?: string[];
+  functionalPains?: string[];
+  emotionalPains?: string[];
+  socialPains?: string[];
+  benefits?: string[];
+  useCases?: string[];
+}
+
+interface JTBDApiResponse {
+  jtbd: {
+    jobs: { functional: string[]; emotional: string[]; social: string[] };
+    pains: { functional: string[]; emotional: string[]; social: string[] };
+    benefits: string[];
+    useCases: string[];
+  };
+}
+
+// Types for Ad Creatives
+interface AdHeadline {
+  id: string;
+  text: string;
+}
+
+interface AdDescription {
+  id: string;
+  text: string;
+}
+
+interface AdCreativeResponse {
+  headlines: AdHeadline[];
+  googleAdsDescriptions: AdDescription[];
+  metaAdsTexts: AdDescription[];
+  heroTexts: AdHeadline[];
+  ctaVariations: AdHeadline[];
+}
 
 // Tag component for chips
 function Tag({ variant = "default" }: { variant?: "default" | "functional" | "emotional" | "social" }) {
@@ -223,6 +278,7 @@ export default function Home() {
   const [isGeneratingCreatives, setIsGeneratingCreatives] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [jtbd, setJtbd] = useState<JTBDResponse | null>(null);
+  const [partialJtbd, setPartialJtbd] = useState<PartialJTBD>({});
   const [creatives, setCreatives] = useState<AdCreativeResponse | null>(null);
   const [showResults, setShowResults] = useState(false);
 
@@ -233,51 +289,217 @@ export default function Home() {
     setIsLoading(true);
     setError(null);
     setJtbd(null);
+    setPartialJtbd({});
     setCreatives(null);
     setShowResults(false);
 
     try {
-      // Step 1: Generate JTBD
-      const jtbdRes = await fetch("/api/generate-jtbd", {
+      const productIdeaTrimmed = productIdea.trim();
+
+      // Step 1: Generate functional jobs
+      const functionalRes = await fetch("/api/generate-jtbd-functional", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ productIdea: productIdea.trim() }),
+        body: JSON.stringify({ productIdea: productIdeaTrimmed }),
       });
 
-      if (!jtbdRes.ok) {
-        const errData = await jtbdRes.json().catch(() => ({}));
-        throw new Error(errData.error || "Ошибка при анализе продукта");
+      if (!functionalRes.ok) {
+        const errData = await functionalRes.json().catch(() => ({}));
+        throw new Error(errData.error || "Ошибка при генерации функциональных работ");
       }
 
-      const jtbdRaw = (await jtbdRes.json()) as JTBDApiResponse;
-      const jtbd = transformJTBD(jtbdRaw);
+      const functionalData = await functionalRes.json();
+      setPartialJtbd(prev => ({ ...prev, functionalJobs: functionalData.jobs }));
+      setShowResults(true); // Show partial results
+
+      // Step 2: Generate emotional jobs
+      const emotionalRes = await fetch("/api/generate-jtbd-emotional", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          productIdea: productIdeaTrimmed,
+          functionalJobs: functionalData.jobs
+        }),
+      });
+
+      if (!emotionalRes.ok) {
+        const errData = await emotionalRes.json().catch(() => ({}));
+        throw new Error(errData.error || "Ошибка при генерации эмоциональных работ");
+      }
+
+      const emotionalData = await emotionalRes.json();
+      setPartialJtbd(prev => ({ ...prev, emotionalJobs: emotionalData.jobs }));
+
+      // Step 3: Generate social jobs
+      const socialRes = await fetch("/api/generate-jtbd-social", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          productIdea: productIdeaTrimmed,
+          functionalJobs: functionalData.jobs,
+          emotionalJobs: emotionalData.jobs
+        }),
+      });
+
+      if (!socialRes.ok) {
+        const errData = await socialRes.json().catch(() => ({}));
+        throw new Error(errData.error || "Ошибка при генерации социальных работ");
+      }
+
+      const socialData = await socialRes.json();
+      setPartialJtbd(prev => ({ ...prev, socialJobs: socialData.jobs }));
+
+      const allJobs = [...functionalData.jobs, ...emotionalData.jobs, ...socialData.jobs];
+
+      // Step 4: Generate functional pains
+      const functionalPainsRes = await fetch("/api/generate-jtbd-pains-functional", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          productIdea: productIdeaTrimmed,
+          jobs: allJobs
+        }),
+      });
+
+      if (!functionalPainsRes.ok) {
+        const errData = await functionalPainsRes.json().catch(() => ({}));
+        throw new Error(errData.error || "Ошибка при генерации функциональных болей");
+      }
+
+      const functionalPainsData = await functionalPainsRes.json();
+      setPartialJtbd(prev => ({ ...prev, functionalPains: functionalPainsData.pains }));
+
+      // Step 5: Generate emotional pains
+      const emotionalPainsRes = await fetch("/api/generate-jtbd-pains-emotional", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          productIdea: productIdeaTrimmed,
+          jobs: allJobs,
+          functionalPains: functionalPainsData.pains
+        }),
+      });
+
+      if (!emotionalPainsRes.ok) {
+        const errData = await emotionalPainsRes.json().catch(() => ({}));
+        throw new Error(errData.error || "Ошибка при генерации эмоциональных болей");
+      }
+
+      const emotionalPainsData = await emotionalPainsRes.json();
+      setPartialJtbd(prev => ({ ...prev, emotionalPains: emotionalPainsData.pains }));
+
+      // Step 6: Generate social pains
+      const socialPainsRes = await fetch("/api/generate-jtbd-pains-social", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          productIdea: productIdeaTrimmed,
+          jobs: allJobs
+        }),
+      });
+
+      if (!socialPainsRes.ok) {
+        const errData = await socialPainsRes.json().catch(() => ({}));
+        throw new Error(errData.error || "Ошибка при генерации социальных болей");
+      }
+
+      const socialPainsData = await socialPainsRes.json();
+      setPartialJtbd(prev => ({ ...prev, socialPains: socialPainsData.pains }));
+
+      const allPains = [...functionalPainsData.pains, ...emotionalPainsData.pains, ...socialPainsData.pains];
+
+      // Step 7: Generate benefits
+      const benefitsRes = await fetch("/api/generate-jtbd-benefits", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          jobs: allJobs,
+          pains: allPains
+        }),
+      });
+
+      if (!benefitsRes.ok) {
+        const errData = await benefitsRes.json().catch(() => ({}));
+        throw new Error(errData.error || "Ошибка при генерации выгод");
+      }
+
+      const benefitsData = await benefitsRes.json();
+      setPartialJtbd(prev => ({ ...prev, benefits: benefitsData.benefits }));
+
+      // Step 8: Generate use cases
+      const useCasesRes = await fetch("/api/generate-jtbd-usecases", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          jobs: allJobs,
+          benefits: benefitsData.benefits
+        }),
+      });
+
+      if (!useCasesRes.ok) {
+        const errData = await useCasesRes.json().catch(() => ({}));
+        throw new Error(errData.error || "Ошибка при генерации сценариев использования");
+      }
+
+      const useCasesData = await useCasesRes.json();
+      setPartialJtbd(prev => ({ ...prev, useCases: useCasesData.useCases }));
+
+      // Convert partial JTBD to full JTBD response
+      const jtbd: JTBDResponse = {
+        jobs: [
+          ...(functionalData.jobs || []).map((text: string, i: number) => ({ id: `job-func-${i}`, text, type: "functional" as const })),
+          ...(emotionalData.jobs || []).map((text: string, i: number) => ({ id: `job-emo-${i}`, text, type: "emotional" as const })),
+          ...(socialData.jobs || []).map((text: string, i: number) => ({ id: `job-soc-${i}`, text, type: "social" as const })),
+        ],
+        pains: [
+          ...(functionalPainsData.pains || []).map((text: string, i: number) => ({ id: `pain-func-${i}`, text, type: "functional" as const })),
+          ...(emotionalPainsData.pains || []).map((text: string, i: number) => ({ id: `pain-emo-${i}`, text, type: "emotional" as const })),
+          ...(socialPainsData.pains || []).map((text: string, i: number) => ({ id: `pain-soc-${i}`, text, type: "social" as const })),
+        ],
+        benefits: (benefitsData.benefits || []).map((text: string, i: number) => ({ id: `benefit-${i}`, text })),
+        useCases: (useCasesData.useCases || []).map((text: string, i: number) => ({ id: `usecase-${i}`, text })),
+      };
       setJtbd(jtbd);
       setShowResults(true); // Show JTBD results immediately
       setIsLoading(false); // Stop main loading
 
-      // Step 2: Generate Ad Creatives (asynchronously)
-      setIsGeneratingCreatives(true);
-      try {
-        const creativesRes = await fetch("/api/generate-creatives", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ jtbd: jtbdRaw.jtbd, productIdea: productIdea.trim() }),
-        });
+      // Step 9: Generate Ad Creatives
+      const creativesRes = await fetch("/api/generate-creatives", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          jtbd: {
+            jobs: {
+              functional: functionalData.jobs,
+              emotional: emotionalData.jobs,
+              social: socialData.jobs
+            },
+            pains: {
+              functional: functionalPainsData.pains,
+              emotional: emotionalPainsData.pains,
+              social: socialPainsData.pains
+            },
+            benefits: benefitsData.benefits,
+            useCases: useCasesData.useCases
+          },
+          productIdea: productIdeaTrimmed
+        }),
+      });
 
         if (!creativesRes.ok) {
           const errData = await creativesRes.json().catch(() => ({}));
           throw new Error(errData.error || "Ошибка при генерации креативов");
         }
 
-        const creativesRaw = await creativesRes.json() as CreativesApiResponse;
-        const creatives = transformCreatives(creativesRaw);
-        setCreatives(creatives);
-      } catch (creativesErr) {
-        // Don't override the main error if JTBD succeeded
-        console.error("Creatives generation failed:", creativesErr);
-      } finally {
-        setIsGeneratingCreatives(false);
-      }
+      const creativesRaw = await creativesRes.json();
+      const creatives: AdCreativeResponse = {
+        headlines: (creativesRaw.creatives?.headlines || []).map((text: string, i: number) => ({ id: `hl-${i}`, text })),
+        googleAdsDescriptions: (creativesRaw.creatives?.googleAds || []).map((text: string, i: number) => ({ id: `gad-${i}`, text })),
+        metaAdsTexts: (creativesRaw.creatives?.metaAds || []).map((text: string, i: number) => ({ id: `mad-${i}`, text })),
+        heroTexts: (creativesRaw.creatives?.heroTexts || []).map((text: string, i: number) => ({ id: `hero-${i}`, text })),
+        ctaVariations: (creativesRaw.creatives?.ctaVariations || []).map((text: string, i: number) => ({ id: `cta-${i}`, text })),
+      };
+      setCreatives(creatives);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Неизвестная ошибка");
       setIsLoading(false);
@@ -288,6 +510,28 @@ export default function Home() {
     setError(null);
     setIsGeneratingCreatives(false);
     handleSubmit({ preventDefault: () => {} } as React.FormEvent);
+  };
+
+  // Convert partial JTBD to display format
+  const getDisplayJtbd = (): JTBDResponse | null => {
+    if (jtbd) return jtbd;
+
+    if (Object.keys(partialJtbd).length === 0) return null;
+
+    return {
+      jobs: [
+        ...(partialJtbd.functionalJobs || []).map((text: string, i: number) => ({ id: `job-func-${i}`, text, type: "functional" as const })),
+        ...(partialJtbd.emotionalJobs || []).map((text: string, i: number) => ({ id: `job-emo-${i}`, text, type: "emotional" as const })),
+        ...(partialJtbd.socialJobs || []).map((text: string, i: number) => ({ id: `job-soc-${i}`, text, type: "social" as const })),
+      ],
+      pains: [
+        ...(partialJtbd.functionalPains || []).map((text: string, i: number) => ({ id: `pain-func-${i}`, text, type: "functional" as const })),
+        ...(partialJtbd.emotionalPains || []).map((text: string, i: number) => ({ id: `pain-emo-${i}`, text, type: "emotional" as const })),
+        ...(partialJtbd.socialPains || []).map((text: string, i: number) => ({ id: `pain-soc-${i}`, text, type: "social" as const })),
+      ],
+      benefits: (partialJtbd.benefits || []).map((text: string, i: number) => ({ id: `benefit-${i}`, text })),
+      useCases: (partialJtbd.useCases || []).map((text: string, i: number) => ({ id: `usecase-${i}`, text })),
+    };
   };
 
   return (
@@ -367,53 +611,55 @@ export default function Home() {
         </section>
 
         {/* Results section */}
-        {showResults && !error && jtbd && (
+        {showResults && (() => {
+          const displayJtbd = getDisplayJtbd();
+          return (
           <>
             {/* JTBD Section */}
-            <section id="jtbd" className="py-12 border-t">
-              <SectionHeader
-                title="Анализ Jobs To Be Done"
-                description="Определены ключевые работы, боли, выгоды и сценарии использования"
-              />
-              <div className="grid gap-6 md:grid-cols-2">
-                <JTBDSection
-                  title="🎯 Работы (Jobs)"
-                  description="Функциональные, эмоциональные и социальные работы, которые выполняет продукт"
-                  items={jtbd.jobs}
-                  type="job"
+            {displayJtbd && (
+              <section id="jtbd" className="py-12 border-t">
+                <SectionHeader
+                  title="Анализ Jobs To Be Done"
+                  description={jtbd ? "Определены ключевые работы, боли, выгоды и сценарии использования" : "Анализ выполняется поэтапно..."}
                 />
-                <JTBDSection
-                  title="💢 Боли (Pains)"
-                  description="Функциональные, эмоциональные и социальные боли клиентов"
-                  items={jtbd.pains}
-                  type="pain"
-                />
-              </div>
-              <div className="grid gap-6 md:grid-cols-2 mt-6">
-                <JTBDSection
-                  title="✅ Выгоды (Benefits)"
-                  description="Ключевые преимущества и ценности продукта"
-                  items={jtbd.benefits}
-                  type="benefit"
-                />
-                <JTBDSection
-                  title="📋 Сценарии использования"
-                  description="Конкретные ситуации применения продукта"
-                  items={jtbd.useCases}
-                  type="usecase"
-                />
-              </div>
-            </section>
+                <div className="grid gap-6 md:grid-cols-2">
+                  <JTBDSection
+                    title="🎯 Работы (Jobs)"
+                    description="Функциональные, эмоциональные и социальные работы, которые выполняет продукт"
+                    items={displayJtbd.jobs}
+                    type="job"
+                  />
+                  <JTBDSection
+                    title="💢 Боли (Pains)"
+                    description="Функциональные, эмоциональные и социальные боли клиентов"
+                    items={displayJtbd.pains}
+                    type="pain"
+                  />
+                </div>
+                <div className="grid gap-6 md:grid-cols-2 mt-6">
+                  <JTBDSection
+                    title="✅ Выгоды (Benefits)"
+                    description="Ключевые преимущества и ценности продукта"
+                    items={displayJtbd.benefits}
+                    type="benefit"
+                  />
+                  <JTBDSection
+                    title="📋 Сценарии использования"
+                    description="Конкретные ситуации применения продукта"
+                    items={displayJtbd.useCases}
+                    type="usecase"
+                  />
+                </div>
+              </section>
+            )}
 
             {/* Ad Creatives Section */}
-            <section id="creatives" className="py-12 border-t">
-              <SectionHeader
-                title="Сгенерированные рекламные креативы"
-                description={isGeneratingCreatives ? "Генерируем рекламные тексты..." : "Готовые к использованию тексты для рекламных кампаний"}
-              />
-              {isGeneratingCreatives ? (
-                <LoadingSpinner />
-              ) : creatives ? (
+            {jtbd && creatives && (
+              <section id="creatives" className="py-12 border-t">
+                <SectionHeader
+                  title="Сгенерированные рекламные креативы"
+                  description="Готовые к использованию тексты для рекламных кампаний"
+                />
                 <div className="grid gap-6">
                   <AdCreativeSection
                     title="📰 Заголовки (10 вариантов)"
@@ -446,18 +692,11 @@ export default function Home() {
                     type="cta"
                   />
                 </div>
-              ) : (
-                <div className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed bg-muted/20 p-12 text-center">
-                  <div className="mb-4 text-5xl">⚠️</div>
-                  <h3 className="text-lg font-semibold">Ошибка генерации креативов</h3>
-                  <p className="mt-2 max-w-md text-muted-foreground">
-                    Не удалось сгенерировать рекламные креативы. Попробуйте снова.
-                  </p>
-                </div>
-              )}
-            </section>
+              </section>
+            )}
           </>
-        )}
+          );
+        })()}
       </main>
 
       {/* Footer */}
