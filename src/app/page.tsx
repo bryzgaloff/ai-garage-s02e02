@@ -84,9 +84,9 @@ function Tag({ variant = "default" }: { variant?: "default" | "functional" | "em
   };
 
   const tagLabels: Record<string, string> = {
-    functional: "Функциональная",
-    emotional: "Эмоциональная",
-    social: "Социальная",
+    functional: "Functional",
+    emotional: "Emotional",
+    social: "Social",
   };
 
   return (
@@ -116,10 +116,10 @@ function JTBDSection({ title, description, items, type }: {
   type: "job" | "pain" | "benefit" | "usecase";
 }) {
   const typeLabels = {
-    job: "Работа",
-    pain: "Боль",
-    benefit: "Выгода",
-    usecase: "Сценарий использования",
+    job: "Job",
+    pain: "Pain",
+    benefit: "Benefit",
+    usecase: "Use Case",
   };
 
   const tagVariants: Record<string, "default" | "functional" | "emotional" | "social"> = {
