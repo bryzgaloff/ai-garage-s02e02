@@ -1,36 +1,59 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# AdCreative Generator
 
-## Getting Started
+An AI-powered tool that generates advertising creatives using the Jobs To Be Done (JTBD) methodology.
 
-First, run the development server:
+## JTBD Methodology
+
+This application implements the Jobs To Be Done framework to analyze product ideas and generate targeted advertising content.
+
+### Pipeline
+
+The JTBD pipeline follows a structured approach:
+
+1. **Product Idea** → Input description of the product and target audience
+2. **Jobs** → Identify functional, emotional, and social jobs customers are trying to accomplish
+3. **Pains** → Discover functional, emotional, and social pain points and frustrations
+4. **Benefits** → Determine key advantages and value propositions that address the pains
+5. **Use Cases** → Define specific scenarios where customers would use the product
+6. **Creatives** → Generate advertising headlines, descriptions, and calls-to-action
+
+### Purpose as Validation Taxonomy
+
+JTBD serves as a validation framework by:
+- Focusing on customer jobs rather than product features
+- Providing a systematic way to validate product-market fit
+- Ensuring marketing messages resonate with actual customer needs
+- Reducing the risk of building solutions to non-existent problems
+
+### Tech Stack
+
+- **Frontend**: Next.js 16, React 19, TypeScript
+- **UI Components**: Shadcn UI with Tailwind CSS
+- **AI Integration**: kilo.ai endpoint for LLM-powered analysis
+- **Authentication**: Clerk for user management
+- **Analytics**: Plausible for usage tracking
+- **Database**: Neon DB (planned for data persistence)
+
+### Getting Started
+
+First, install dependencies and run the development server:
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000) with your browser to start generating creatives.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### Project Structure
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- `src/app/` - Next.js app router pages and API routes
+- `src/components/ui/` - Shadcn UI components
+- `src/lib/` - Utility functions and AI integration
+- `src/app/api/` - API endpoints for JTBD generation steps
 
 ## Learn More
 
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- [Jobs To Be Done Theory](https://jtbd.info/) - Official JTBD methodology
+- [Next.js Documentation](https://nextjs.org/docs) - Framework documentation
+- [Shadcn UI](https://ui.shadcn.com/) - Component library
