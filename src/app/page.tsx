@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 
 // Types for JTBD data
 interface Job {
@@ -67,6 +68,49 @@ interface AdCreativeResponse {
   ctaVariations: AdHeadline[];
 }
 
+// Stream JSON array from API
+async function streamJsonArray(url: string, body: Record<string, unknown>, onProgress?: (items: unknown[]) => void): Promise<unknown[]> {
+  const response = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+
+  if (!response.ok) {
+    const errData = await response.json().catch(() => ({}));
+    throw new Error((errData as { error?: string }).error || "API error");
+  }
+
+  const reader = response.body?.getReader();
+  if (!reader) throw new Error("No response body");
+
+  const decoder = new TextDecoder();
+  let buffer = "";
+  const results: unknown[] = [];
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+    const lines = buffer.split("\n");
+    buffer = lines.pop() || ""; // keep incomplete line
+
+    for (const line of lines) {
+      if (line.trim()) {
+        try {
+          const item = JSON.parse(line.trim());
+          results.push(item);
+          onProgress?.(results.slice()); // pass copy
+        } catch (e) {
+          // ignore invalid JSON
+        }
+      }
+    }
+  }
+
+  return results;
+}
+
 // Tag component for chips
 function Tag({ variant = "default" }: { variant?: "default" | "functional" | "emotional" | "social" }) {
   const variantStyles = {
@@ -77,9 +121,9 @@ function Tag({ variant = "default" }: { variant?: "default" | "functional" | "em
   };
 
   const tagLabels: Record<string, string> = {
-    functional: "Функциональная",
-    emotional: "Эмоциональная",
-    social: "Социальная",
+    functional: "Functional",
+    emotional: "Emotional",
+    social: "Social",
   };
 
   return (
@@ -101,54 +145,9 @@ function SectionHeader({ title, description }: { title: string; description?: st
   );
 }
 
-// JTBD Card component
-function JTBDSection({ title, description, items, type }: {
-  title: string;
-  description?: string;
-  items: Job[] | Pain[] | Benefit[] | UseCase[];
-  type: "job" | "pain" | "benefit" | "usecase";
-}) {
 
+>
 
-  const tagVariants: Record<string, "default" | "functional" | "emotional" | "social"> = {
-    functional: "functional",
-    emotional: "emotional",
-    social: "social",
-  };
-
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <span>{title}</span>
-          <span className="text-xs font-normal text-muted-foreground bg-muted px-2 py-0.5 rounded-full">
-            {items.length}
-          </span>
-        </CardTitle>
-        {description && <CardDescription>{description}</CardDescription>}
-      </CardHeader>
-      <CardContent>
-        <div className="flex flex-wrap gap-2">
-          {items.map((item) => (
-            <div
-              key={item.id}
-              className="flex items-center gap-1.5 rounded-lg border bg-muted/50 px-3 py-2 text-sm"
-            >
-              {type === "job" || type === "pain" ? (
-                <Tag variant={tagVariants[(item as Job).type] || "default"} />
-              ) : (
-                <span className="text-muted-foreground">
-                  {type === "benefit" ? "✓" : "→"}
-                </span>
-              )}
-              <span>{(item as Job | Pain | Benefit | UseCase).text}</span>
-            </div>
-          ))}
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
 
 // Ad Creative Section component
 function AdCreativeSection({ title, description, items, type }: {
@@ -194,17 +193,69 @@ function AdCreativeSection({ title, description, items, type }: {
   );
 }
 
-// Loading spinner component
-function LoadingSpinner() {
+
+
+// Spoiler section component for accordion
+function SpoilerSection({
+  title,
+  description,
+  items,
+  type,
+  isGenerating,
+  generatingText
+}: {
+  title: string;
+  description?: string | null;
+  items: Job[] | Pain[] | Benefit[] | UseCase[] | AdHeadline[] | AdDescription[];
+  type: "job" | "pain" | "benefit" | "usecase" | "headline" | "description" | "hero" | "cta";
+  isGenerating?: boolean;
+  generatingText?: string | null;
+}) {
+
+  const tagVariants: Record<string, "default" | "functional" | "emotional" | "social"> = {
+    functional: "functional",
+    emotional: "emotional",
+    social: "social",
+  };
+
+  const icons: Record<string, string> = {
+    headline: "📰",
+    description: "📝",
+    hero: "🎯",
+    cta: "🚀",
+  };
+
   return (
-    <div className="flex items-center justify-center py-12">
-      <div className="relative">
-        <div className="h-12 w-12 animate-spin rounded-full border-4 border-muted border-t-primary"></div>
-        <div className="absolute inset-0 flex items-center justify-center text-xs font-bold text-primary">
-          AI
+    <div className="space-y-4">
+      {description && <p className="text-muted-foreground">{description}</p>}
+      {isGenerating ? (
+        <div className="flex items-center justify-center py-8">
+          <div className="relative">
+            <div className="h-8 w-8 animate-spin rounded-full border-4 border-muted border-t-primary"></div>
+          </div>
+          <p className="ml-4 text-muted-foreground">{generatingText || ""}</p>
         </div>
-      </div>
-      <p className="ml-4 text-muted-foreground">Анализируем ваш продукт...</p>
+      ) : (
+        <div className="flex flex-wrap gap-2">
+          {items.map((item) => (
+            <div
+              key={item.id}
+              className="flex items-center gap-1.5 rounded-lg border bg-muted/50 px-3 py-2 text-sm"
+            >
+              {type === "job" || type === "pain" ? (
+                <Tag variant={tagVariants[(item as Job).type] || "default"} />
+              ) : type === "headline" || type === "description" || type === "hero" || type === "cta" ? (
+                <span className="text-muted-foreground">{icons[type]}</span>
+              ) : (
+                <span className="text-muted-foreground">
+                  {type === "benefit" ? "✓" : "→"}
+                </span>
+              )}
+              <span>{(item as Job | Pain | Benefit | UseCase | AdHeadline | AdDescription).text}</span>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -230,7 +281,7 @@ function ErrorMessage({ message, onRetry }: { message: string; onRetry: () => vo
             </svg>
           </div>
           <div className="flex-1">
-            <h3 className="font-semibold text-destructive">Произошла ошибка</h3>
+            <h3 className="font-semibold text-destructive">An error occurred</h3>
             <p className="mt-1 text-sm text-muted-foreground">{message}</p>
             <Button
               variant="outline"
@@ -238,7 +289,7 @@ function ErrorMessage({ message, onRetry }: { message: string; onRetry: () => vo
               className="mt-3"
               onClick={onRetry}
             >
-              Попробовать снова
+              Try again
             </Button>
           </div>
         </div>
@@ -257,6 +308,8 @@ export default function Home() {
   const [partialJtbd, setPartialJtbd] = useState<PartialJTBD>({});
   const [creatives, setCreatives] = useState<AdCreativeResponse | null>(null);
   const [showResults, setShowResults] = useState(false);
+  const [accordionValue, setAccordionValue] = useState<string>("");
+  const [currentGeneratingText, setCurrentGeneratingText] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -267,218 +320,154 @@ export default function Home() {
     setJtbd(null);
     setPartialJtbd({});
     setCreatives(null);
-    setShowResults(false);
+    setShowResults(true); // Show results immediately
+    setAccordionValue("jobs");
+    setCurrentGeneratingText("Functional jobs are generating");
 
     try {
       const productIdeaTrimmed = productIdea.trim();
+      let functionalJobs: string[] = [];
+      let emotionalJobs: string[] = [];
+      let socialJobs: string[] = [];
+      let functionalPains: string[] = [];
+      let emotionalPains: string[] = [];
+      let socialPains: string[] = [];
+      let benefits: string[] = [];
+      let useCases: string[] = [];
 
       // Step 1: Generate functional jobs
-      const functionalRes = await fetch("/api/generate-jtbd-functional", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ productIdea: productIdeaTrimmed }),
+      await streamJsonArray("/api/generate-jtbd-functional", { productIdea: productIdeaTrimmed }, (items) => {
+        functionalJobs = items.map((item: any) => item.text || item);
+        setPartialJtbd(prev => ({ ...prev, functionalJobs }));
       });
-
-      if (!functionalRes.ok) {
-        const errData = await functionalRes.json().catch(() => ({}));
-        throw new Error(errData.error || "Ошибка при генерации функциональных работ");
-      }
-
-      const functionalData = await functionalRes.json();
-      setPartialJtbd(prev => ({ ...prev, functionalJobs: functionalData.jobs }));
-      setShowResults(true); // Show partial results
 
       // Step 2: Generate emotional jobs
-      const emotionalRes = await fetch("/api/generate-jtbd-emotional", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          productIdea: productIdeaTrimmed,
-          functionalJobs: functionalData.jobs
-        }),
+      setCurrentGeneratingText("Emotional jobs are generating");
+      await streamJsonArray("/api/generate-jtbd-emotional", {
+        productIdea: productIdeaTrimmed,
+        functionalJobs
+      }, (items) => {
+        emotionalJobs = items.map((item: any) => item.text || item);
+        setPartialJtbd(prev => ({ ...prev, emotionalJobs }));
       });
-
-      if (!emotionalRes.ok) {
-        const errData = await emotionalRes.json().catch(() => ({}));
-        throw new Error(errData.error || "Ошибка при генерации эмоциональных работ");
-      }
-
-      const emotionalData = await emotionalRes.json();
-      setPartialJtbd(prev => ({ ...prev, emotionalJobs: emotionalData.jobs }));
 
       // Step 3: Generate social jobs
-      const socialRes = await fetch("/api/generate-jtbd-social", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          productIdea: productIdeaTrimmed,
-          functionalJobs: functionalData.jobs,
-          emotionalJobs: emotionalData.jobs
-        }),
+      setCurrentGeneratingText("Social jobs are generating");
+      await streamJsonArray("/api/generate-jtbd-social", {
+        productIdea: productIdeaTrimmed,
+        functionalJobs,
+        emotionalJobs
+      }, (items) => {
+        socialJobs = items.map((item: any) => item.text || item);
+        setPartialJtbd(prev => ({ ...prev, socialJobs }));
       });
 
-      if (!socialRes.ok) {
-        const errData = await socialRes.json().catch(() => ({}));
-        throw new Error(errData.error || "Ошибка при генерации социальных работ");
-      }
-
-      const socialData = await socialRes.json();
-      setPartialJtbd(prev => ({ ...prev, socialJobs: socialData.jobs }));
-
-      const allJobs = [...functionalData.jobs, ...emotionalData.jobs, ...socialData.jobs];
+      const allJobs = [...functionalJobs, ...emotionalJobs, ...socialJobs];
 
       // Step 4: Generate functional pains
-      const functionalPainsRes = await fetch("/api/generate-jtbd-pains-functional", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          productIdea: productIdeaTrimmed,
-          jobs: allJobs
-        }),
+      setAccordionValue("pains");
+      setCurrentGeneratingText("Functional pains are generating");
+      await streamJsonArray("/api/generate-jtbd-pains-functional", {
+        productIdea: productIdeaTrimmed,
+        jobs: allJobs
+      }, (items) => {
+        functionalPains = items.map((item: any) => item.text || item);
+        setPartialJtbd(prev => ({ ...prev, functionalPains }));
       });
-
-      if (!functionalPainsRes.ok) {
-        const errData = await functionalPainsRes.json().catch(() => ({}));
-        throw new Error(errData.error || "Ошибка при генерации функциональных болей");
-      }
-
-      const functionalPainsData = await functionalPainsRes.json();
-      setPartialJtbd(prev => ({ ...prev, functionalPains: functionalPainsData.pains }));
 
       // Step 5: Generate emotional pains
-      const emotionalPainsRes = await fetch("/api/generate-jtbd-pains-emotional", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          productIdea: productIdeaTrimmed,
-          jobs: allJobs,
-          functionalPains: functionalPainsData.pains
-        }),
+      setCurrentGeneratingText("Emotional pains are generating");
+      await streamJsonArray("/api/generate-jtbd-pains-emotional", {
+        productIdea: productIdeaTrimmed,
+        jobs: allJobs,
+        functionalPains
+      }, (items) => {
+        emotionalPains = items.map((item: any) => item.text || item);
+        setPartialJtbd(prev => ({ ...prev, emotionalPains }));
       });
-
-      if (!emotionalPainsRes.ok) {
-        const errData = await emotionalPainsRes.json().catch(() => ({}));
-        throw new Error(errData.error || "Ошибка при генерации эмоциональных болей");
-      }
-
-      const emotionalPainsData = await emotionalPainsRes.json();
-      setPartialJtbd(prev => ({ ...prev, emotionalPains: emotionalPainsData.pains }));
 
       // Step 6: Generate social pains
-      const socialPainsRes = await fetch("/api/generate-jtbd-pains-social", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          productIdea: productIdeaTrimmed,
-          jobs: allJobs
-        }),
+      setCurrentGeneratingText("Social pains are generating");
+      await streamJsonArray("/api/generate-jtbd-pains-social", {
+        productIdea: productIdeaTrimmed,
+        jobs: allJobs
+      }, (items) => {
+        socialPains = items.map((item: any) => item.text || item);
+        setPartialJtbd(prev => ({ ...prev, socialPains }));
       });
 
-      if (!socialPainsRes.ok) {
-        const errData = await socialPainsRes.json().catch(() => ({}));
-        throw new Error(errData.error || "Ошибка при генерации социальных болей");
-      }
-
-      const socialPainsData = await socialPainsRes.json();
-      setPartialJtbd(prev => ({ ...prev, socialPains: socialPainsData.pains }));
-
-      const allPains = [...functionalPainsData.pains, ...emotionalPainsData.pains, ...socialPainsData.pains];
+      const allPains = [...functionalPains, ...emotionalPains, ...socialPains];
 
       // Step 7: Generate benefits
-      const benefitsRes = await fetch("/api/generate-jtbd-benefits", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          jobs: allJobs,
-          pains: allPains
-        }),
+      setAccordionValue("benefits");
+      setCurrentGeneratingText("Benefits are generating");
+      await streamJsonArray("/api/generate-jtbd-benefits", {
+        jobs: allJobs,
+        pains: allPains
+      }, (items) => {
+        benefits = items.map((item: any) => item.text || item);
+        setPartialJtbd(prev => ({ ...prev, benefits }));
       });
-
-      if (!benefitsRes.ok) {
-        const errData = await benefitsRes.json().catch(() => ({}));
-        throw new Error(errData.error || "Ошибка при генерации выгод");
-      }
-
-      const benefitsData = await benefitsRes.json();
-      setPartialJtbd(prev => ({ ...prev, benefits: benefitsData.benefits }));
 
       // Step 8: Generate use cases
-      const useCasesRes = await fetch("/api/generate-jtbd-usecases", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          jobs: allJobs,
-          benefits: benefitsData.benefits
-        }),
+      setAccordionValue("usecases");
+      setCurrentGeneratingText("Use cases are generating");
+      await streamJsonArray("/api/generate-jtbd-usecases", {
+        jobs: allJobs,
+        benefits
+      }, (items) => {
+        useCases = items.map((item: any) => item.text || item);
+        setPartialJtbd(prev => ({ ...prev, useCases }));
       });
-
-      if (!useCasesRes.ok) {
-        const errData = await useCasesRes.json().catch(() => ({}));
-        throw new Error(errData.error || "Ошибка при генерации сценариев использования");
-      }
-
-      const useCasesData = await useCasesRes.json();
-      setPartialJtbd(prev => ({ ...prev, useCases: useCasesData.useCases }));
 
       // Convert partial JTBD to full JTBD response
       const jtbd: JTBDResponse = {
         jobs: [
-          ...(functionalData.jobs || []).map((text: string, i: number) => ({ id: `job-func-${i}`, text, type: "functional" as const })),
-          ...(emotionalData.jobs || []).map((text: string, i: number) => ({ id: `job-emo-${i}`, text, type: "emotional" as const })),
-          ...(socialData.jobs || []).map((text: string, i: number) => ({ id: `job-soc-${i}`, text, type: "social" as const })),
+          ...functionalJobs.map((text: string, i: number) => ({ id: `job-func-${i}`, text, type: "functional" as const })),
+          ...emotionalJobs.map((text: string, i: number) => ({ id: `job-emo-${i}`, text, type: "emotional" as const })),
+          ...socialJobs.map((text: string, i: number) => ({ id: `job-soc-${i}`, text, type: "social" as const })),
         ],
         pains: [
-          ...(functionalPainsData.pains || []).map((text: string, i: number) => ({ id: `pain-func-${i}`, text, type: "functional" as const })),
-          ...(emotionalPainsData.pains || []).map((text: string, i: number) => ({ id: `pain-emo-${i}`, text, type: "emotional" as const })),
-          ...(socialPainsData.pains || []).map((text: string, i: number) => ({ id: `pain-soc-${i}`, text, type: "social" as const })),
+          ...functionalPains.map((text: string, i: number) => ({ id: `pain-func-${i}`, text, type: "functional" as const })),
+          ...emotionalPains.map((text: string, i: number) => ({ id: `pain-emo-${i}`, text, type: "emotional" as const })),
+          ...socialPains.map((text: string, i: number) => ({ id: `pain-soc-${i}`, text, type: "social" as const })),
         ],
-        benefits: (benefitsData.benefits || []).map((text: string, i: number) => ({ id: `benefit-${i}`, text })),
-        useCases: (useCasesData.useCases || []).map((text: string, i: number) => ({ id: `usecase-${i}`, text })),
+        benefits: benefits.map((text: string, i: number) => ({ id: `benefit-${i}`, text })),
+        useCases: useCases.map((text: string, i: number) => ({ id: `usecase-${i}`, text })),
       };
       setJtbd(jtbd);
-      setShowResults(true); // Show JTBD results immediately
       setIsLoading(false); // Stop main loading
 
       // Step 9: Generate Ad Creatives
-      const creativesRes = await fetch("/api/generate-creatives", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          jtbd: {
-            jobs: {
-              functional: functionalData.jobs,
-              emotional: emotionalData.jobs,
-              social: socialData.jobs
-            },
-            pains: {
-              functional: functionalPainsData.pains,
-              emotional: emotionalPainsData.pains,
-              social: socialPainsData.pains
-            },
-            benefits: benefitsData.benefits,
-            useCases: useCasesData.useCases
-          },
-          productIdea: productIdeaTrimmed
-        }),
-      });
-
-        if (!creativesRes.ok) {
-          const errData = await creativesRes.json().catch(() => ({}));
-          throw new Error(errData.error || "Ошибка при генерации креативов");
+      setAccordionValue("creatives");
+      setCurrentGeneratingText("Creatives are generating");
+      let creativesData: any = {};
+      await streamJsonArray("/api/generate-creatives", {
+        jtbd: {
+          jobs: { functional: functionalJobs, emotional: emotionalJobs, social: socialJobs },
+          pains: { functional: functionalPains, emotional: emotionalPains, social: socialPains },
+          benefits,
+          useCases
+        },
+        productIdea: productIdeaTrimmed
+      }, (items) => {
+        // Assume the last item has the full creatives
+        if (items.length > 0) {
+          creativesData = items[items.length - 1];
+          setCreatives({
+            headlines: (creativesData.headlines || []).map((text: string, i: number) => ({ id: `hl-${i}`, text })),
+            googleAdsDescriptions: (creativesData.googleAds || []).map((text: string, i: number) => ({ id: `gad-${i}`, text })),
+            metaAdsTexts: (creativesData.metaAds || []).map((text: string, i: number) => ({ id: `mad-${i}`, text })),
+            heroTexts: (creativesData.heroTexts || []).map((text: string, i: number) => ({ id: `hero-${i}`, text })),
+            ctaVariations: (creativesData.ctaVariations || []).map((text: string, i: number) => ({ id: `cta-${i}`, text })),
+          });
         }
-
-      const creativesRaw = await creativesRes.json();
-      const creatives: AdCreativeResponse = {
-        headlines: (creativesRaw.creatives?.headlines || []).map((text: string, i: number) => ({ id: `hl-${i}`, text })),
-        googleAdsDescriptions: (creativesRaw.creatives?.googleAds || []).map((text: string, i: number) => ({ id: `gad-${i}`, text })),
-        metaAdsTexts: (creativesRaw.creatives?.metaAds || []).map((text: string, i: number) => ({ id: `mad-${i}`, text })),
-        heroTexts: (creativesRaw.creatives?.heroTexts || []).map((text: string, i: number) => ({ id: `hero-${i}`, text })),
-        ctaVariations: (creativesRaw.creatives?.ctaVariations || []).map((text: string, i: number) => ({ id: `cta-${i}`, text })),
-      };
-      setCreatives(creatives);
+      });
+      setCurrentGeneratingText(null);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Неизвестная ошибка");
+      setError(err instanceof Error ? err.message : "Unknown error");
       setIsLoading(false);
+      setCurrentGeneratingText(null);
     }
   };
 
@@ -522,13 +511,13 @@ export default function Home() {
           </div>
           <nav className="hidden md:flex gap-6">
             <a href="#input" className="text-sm font-medium hover:text-primary">
-              Ввод
+              Input
             </a>
             <a href="#jtbd" className="text-sm font-medium hover:text-primary">
               JTBD
             </a>
             <a href="#creatives" className="text-sm font-medium hover:text-primary">
-              Креативы
+              Creatives
             </a>
           </nav>
         </div>
@@ -541,10 +530,10 @@ export default function Home() {
           <div className="mx-auto max-w-3xl">
             <div className="text-center mb-8">
               <h1 className="text-4xl font-bold tracking-tight mb-4">
-                Введи описание своего продукта
+                Enter your product description
               </h1>
               <p className="text-xl text-muted-foreground">
-                получи 10 вариантов рекламных заголовков + тексты объявлений для Google/Meta
+                get 10 ad headline variations + ad texts for Google/Meta
               </p>
             </div>
 
@@ -553,12 +542,12 @@ export default function Home() {
                 <Textarea
                   value={productIdea}
                   onChange={(e) => setProductIdea(e.target.value)}
-                  placeholder="Опишите ваш продукт, целевую аудиторию, основные преимущества..."
+                  placeholder="Describe your product, target audience, main benefits..."
                   rows={5}
                   className="resize-none text-base"
                 />
                 <p className="mt-2 text-xs text-muted-foreground">
-                  Чем подробнее описание, тем лучше результат
+                  The more detailed the description, the better the result
                 </p>
               </div>
               <div className="flex justify-end">
@@ -570,114 +559,146 @@ export default function Home() {
                   {isLoading ? (
                     <>
                       <div className="mr-2 size-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                      Генерация...
+                      Generating...
                     </>
                   ) : (
-                    "Сгенерировать креативы"
+                     "Generate Creatives"
                   )}
                 </Button>
               </div>
             </form>
 
-            {isLoading && <LoadingSpinner />}
+
 
             {error && <ErrorMessage message={error} onRetry={handleRetry} />}
           </div>
         </section>
 
         {/* Results section */}
-        {showResults && (() => {
-          const displayJtbd = getDisplayJtbd();
-          return (
-          <>
-            {/* JTBD Section */}
-            {displayJtbd && (
-              <section id="jtbd" className="py-12 border-t">
-                <SectionHeader
-                  title="Анализ Jobs To Be Done"
-                  description={jtbd ? "Определены ключевые работы, боли, выгоды и сценарии использования" : "Анализ выполняется поэтапно..."}
-                />
-                <div className="grid gap-6 md:grid-cols-2">
-                  <JTBDSection
-                    title="🎯 Работы (Jobs)"
-                    description="Функциональные, эмоциональные и социальные работы, которые выполняет продукт"
-                    items={displayJtbd.jobs}
+        {showResults && (
+          <section id="jtbd" className="py-12 border-t">
+            <SectionHeader
+              title="Jobs To Be Done Analysis"
+              description={jtbd ? "Key jobs, pains, benefits, and use cases defined" : "Analysis is performed step by step..."}
+            />
+            <Accordion value={accordionValue as any} className="space-y-4">
+              <AccordionItem value="jobs">
+                <AccordionTrigger>
+                  🎯 Jobs {currentGeneratingText?.includes("jobs") ? `(${partialJtbd.functionalJobs?.length || 0} + ${partialJtbd.emotionalJobs?.length || 0} + ${partialJtbd.socialJobs?.length || 0})` : `(${getDisplayJtbd()?.jobs.length || 0})`}
+                </AccordionTrigger>
+                <AccordionContent>
+                  <SpoilerSection
+                    title="Jobs"
+                    description="Functional, emotional, and social jobs that the product performs"
+                    items={getDisplayJtbd()?.jobs || []}
                     type="job"
+                    isGenerating={currentGeneratingText?.includes("jobs") || false}
+                    generatingText={currentGeneratingText}
                   />
-                  <JTBDSection
-                    title="💢 Боли (Pains)"
-                    description="Функциональные, эмоциональные и социальные боли клиентов"
-                    items={displayJtbd.pains}
+                </AccordionContent>
+              </AccordionItem>
+              <AccordionItem value="pains">
+                <AccordionTrigger>
+                  💢 Pains {currentGeneratingText?.includes("pains") ? `(${partialJtbd.functionalPains?.length || 0} + ${partialJtbd.emotionalPains?.length || 0} + ${partialJtbd.socialPains?.length || 0})` : `(${getDisplayJtbd()?.pains.length || 0})`}
+                </AccordionTrigger>
+                <AccordionContent>
+                  <SpoilerSection
+                    title="Pains"
+                    description="Functional, emotional, and social client pains"
+                    items={getDisplayJtbd()?.pains || []}
                     type="pain"
+                    isGenerating={currentGeneratingText?.includes("pains") || false}
+                    generatingText={currentGeneratingText}
                   />
-                </div>
-                <div className="grid gap-6 md:grid-cols-2 mt-6">
-                  <JTBDSection
-                    title="✅ Выгоды (Benefits)"
-                    description="Ключевые преимущества и ценности продукта"
-                    items={displayJtbd.benefits}
+                </AccordionContent>
+              </AccordionItem>
+              <AccordionItem value="benefits">
+                <AccordionTrigger>
+                  ✅ Benefits {currentGeneratingText?.includes("Benefits") ? `(${partialJtbd.benefits?.length || 0})` : `(${getDisplayJtbd()?.benefits.length || 0})`}
+                </AccordionTrigger>
+                <AccordionContent>
+                  <SpoilerSection
+                    title="Benefits"
+                    description="Key advantages and values of the product"
+                    items={getDisplayJtbd()?.benefits || []}
                     type="benefit"
+                    isGenerating={currentGeneratingText?.includes("Benefits") || false}
+                    generatingText={currentGeneratingText}
                   />
-                  <JTBDSection
-                    title="📋 Сценарии использования"
-                    description="Конкретные ситуации применения продукта"
-                    items={displayJtbd.useCases}
+                </AccordionContent>
+              </AccordionItem>
+              <AccordionItem value="usecases">
+                <AccordionTrigger>
+                  📋 Use Cases {currentGeneratingText?.includes("Use cases") ? `(${partialJtbd.useCases?.length || 0})` : `(${getDisplayJtbd()?.useCases.length || 0})`}
+                </AccordionTrigger>
+                <AccordionContent>
+                  <SpoilerSection
+                    title="Use Cases"
+                    description="Specific product application situations"
+                    items={getDisplayJtbd()?.useCases || []}
                     type="usecase"
+                    isGenerating={currentGeneratingText?.includes("Use cases") || false}
+                    generatingText={currentGeneratingText}
                   />
-                </div>
-              </section>
-            )}
-
-            {/* Ad Creatives Section */}
-            {jtbd && creatives && (
-              <section id="creatives" className="py-12 border-t">
-                <SectionHeader
-                  title="Сгенерированные рекламные креативы"
-                  description="Готовые к использованию тексты для рекламных кампаний"
-                />
-                <div className="grid gap-6">
-                  <AdCreativeSection
-                    title="📰 Заголовки (10 вариантов)"
-                    description="Привлекательные заголовки для рекламы"
-                    items={creatives.headlines}
-                    type="headline"
-                  />
-                  <AdCreativeSection
-                    title="📝 Описания для Google Ads (5 вариантов)"
-                    description="Тексты описаний для рекламных объявлений в Google"
-                    items={creatives.googleAdsDescriptions}
-                    type="description"
-                  />
-                  <AdCreativeSection
-                    title="📱 Тексты для Meta Ads (5 вариантов)"
-                    description="Рекламные тексты для Facebook, Instagram и других платформ Meta"
-                    items={creatives.metaAdsTexts}
-                    type="description"
-                  />
-                  <AdCreativeSection
-                    title="🎯 Hero тексты (3 варианта)"
-                    description="Основные промо-тексты для главных экранов и баннеров"
-                    items={creatives.heroTexts}
-                    type="hero"
-                  />
-                  <AdCreativeSection
-                    title="🚀 Призывы к действию (3 варианта)"
-                    description="Эффективные CTA (Call-to-Action) для увеличения конверсии"
-                    items={creatives.ctaVariations}
-                    type="cta"
-                  />
-                </div>
-              </section>
-            )}
-          </>
-          );
-        })()}
+                </AccordionContent>
+              </AccordionItem>
+              <AccordionItem value="creatives">
+                <AccordionTrigger>
+                  🎨 Creatives {currentGeneratingText?.includes("Creatives") ? `(${creatives ? Object.values(creatives).reduce((sum, arr) => sum + arr.length, 0) : 0})` : `(${creatives ? Object.values(creatives).reduce((sum, arr) => sum + arr.length, 0) : 0})`}
+                </AccordionTrigger>
+                <AccordionContent>
+                  {creatives ? (
+                    <div className="space-y-6">
+                      <AdCreativeSection
+                        title="📰 Headlines (10 variants)"
+                        description="Attractive headlines for advertising"
+                        items={creatives.headlines}
+                        type="headline"
+                      />
+                      <AdCreativeSection
+                        title="📝 Google Ads Descriptions (5 variants)"
+                        description="Description texts for Google ads"
+                        items={creatives.googleAdsDescriptions}
+                        type="description"
+                      />
+                      <AdCreativeSection
+                        title="📱 Meta Ads Texts (5 variants)"
+                        description="Ad texts for Facebook, Instagram and other Meta platforms"
+                        items={creatives.metaAdsTexts}
+                        type="description"
+                      />
+                      <AdCreativeSection
+                        title="🎯 Hero Texts (3 variants)"
+                        description="Main promo texts for main screens and banners"
+                        items={creatives.heroTexts}
+                        type="hero"
+                      />
+                      <AdCreativeSection
+                        title="🚀 Call-to-Actions (3 variants)"
+                        description="Effective CTA (Call-to-Action) for increasing conversion"
+                        items={creatives.ctaVariations}
+                        type="cta"
+                      />
+                    </div>
+                  ) : (
+                    <div className="flex items-center justify-center py-8">
+                      <div className="relative">
+                        <div className="h-8 w-8 animate-spin rounded-full border-4 border-muted border-t-primary"></div>
+                      </div>
+                      <p className="ml-4 text-muted-foreground">{currentGeneratingText}</p>
+                    </div>
+                  )}
+                </AccordionContent>
+              </AccordionItem>
+            </Accordion>
+          </section>
+        )}
       </main>
 
       {/* Footer */}
       <footer className="border-t py-8 mt-12">
         <div className="container mx-auto px-4 text-center text-muted-foreground">
-          <p>&copy; 2026 AdCreative Generator. Все права защищены.</p>
+          <p>&copy; 2026 AdCreative Generator. All rights reserved.</p>
         </div>
       </footer>
     </div>
