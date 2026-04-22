@@ -31,7 +31,7 @@ describe("transformJTBD", () => {
   });
 
   it("handles undefined jtbd object", () => {
-    const result = transformJTBD(undefined as any);
+    const result = transformJTBD(undefined);
 
     expect(result.jobs).toEqual([]);
     expect(result.pains).toEqual([]);
@@ -75,7 +75,7 @@ describe("transformJTBD", () => {
         pains: "not an object",
         benefits: { wrong: "format" },
       },
-    } as any;
+    } as unknown as JTBDApiResponse;
 
     const result = transformJTBD(input);
 
@@ -118,7 +118,7 @@ describe("transformCreatives", () => {
   });
 
   it("handles undefined creatives object", () => {
-    const result = transformCreatives(undefined as any);
+    const result = transformCreatives(undefined);
 
     expect(result.headlines).toEqual([]);
     expect(result.googleAdsDescriptions).toEqual([]);
@@ -159,7 +159,7 @@ describe("transformCreatives", () => {
         googleAds: "not an array",
         metaAds: { nested: "object" },
       },
-    } as any;
+    } as unknown as CreativesApiResponse;
 
     const result = transformCreatives(input);
 

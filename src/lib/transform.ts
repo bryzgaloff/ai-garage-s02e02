@@ -30,11 +30,11 @@ export interface JTBDResponse {
 }
 
 export interface JTBDApiResponse {
-  jtbd: {
-    jobs: { functional: string[]; emotional: string[]; social: string[] };
-    pains: { functional: string[]; emotional: string[]; social: string[] };
-    benefits: string[];
-    useCases: string[];
+  jtbd?: {
+    jobs?: { functional?: string[]; emotional?: string[]; social?: string[] };
+    pains?: { functional?: string[]; emotional?: string[]; social?: string[] };
+    benefits?: string[];
+    useCases?: string[];
   };
 }
 
@@ -57,12 +57,12 @@ export interface AdCreativeResponse {
 }
 
 export interface CreativesApiResponse {
-  creatives: {
-    headlines: string[];
-    googleAds: string[];
-    metaAds: string[];
-    heroTexts: string[];
-    ctaVariations: string[];
+  creatives?: {
+    headlines?: string[];
+    googleAds?: string[];
+    metaAds?: string[];
+    heroTexts?: string[];
+    ctaVariations?: string[];
   };
 }
 
@@ -70,7 +70,7 @@ function isStringArray(arr: unknown): arr is string[] {
   return Array.isArray(arr) && arr.every((item) => typeof item === 'string');
 }
 
-export function transformJTBD(jtbdRaw: JTBDApiResponse): JTBDResponse {
+export function transformJTBD(jtbdRaw: JTBDApiResponse | undefined): JTBDResponse {
   if (!jtbdRaw?.jtbd) {
     return {
       jobs: [],
@@ -98,7 +98,7 @@ export function transformJTBD(jtbdRaw: JTBDApiResponse): JTBDResponse {
   };
 }
 
-export function transformCreatives(creativesRaw: CreativesApiResponse): AdCreativeResponse {
+export function transformCreatives(creativesRaw: CreativesApiResponse | undefined): AdCreativeResponse {
   if (!creativesRaw?.creatives) {
     return {
       headlines: [],
