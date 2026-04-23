@@ -281,6 +281,7 @@ export default function Home() {
     setJtbd(null);
     setPartialJtbd({});
     setCreatives(null);
+    setIsGeneratingCreatives(false);
     setShowResults(false);
 
     try {
@@ -347,16 +348,22 @@ export default function Home() {
 
       eventSource.addEventListener('creatives', (event) => {
         const data = JSON.parse(event.data);
+        if (data.status === 'generating') {
+          setIsGeneratingCreatives(true);
+          setCurrentStep('creatives');
+          setOpenAccordion('creatives');
+          return;
+        }
+
         const creatives: AdCreativeResponse = {
-          headlines: (data.creatives?.headlines || []).map((text: string, i: number) => ({ id: `hl-${i}`, text })),
-          googleAdsDescriptions: (data.creatives?.googleAds || []).map((text: string, i: number) => ({ id: `gad-${i}`, text })),
-          metaAdsTexts: (data.creatives?.metaAds || []).map((text: string, i: number) => ({ id: `mad-${i}`, text })),
-          heroTexts: (data.creatives?.heroTexts || []).map((text: string, i: number) => ({ id: `hero-${i}`, text })),
-          ctaVariations: (data.creatives?.ctaVariations || []).map((text: string, i: number) => ({ id: `cta-${i}`, text })),
+          headlines: (data.headlines || []).map((text: string, i: number) => ({ id: `hl-${i}`, text })),
+          googleAdsDescriptions: (data.googleAdsDescriptions || []).map((text: string, i: number) => ({ id: `gad-${i}`, text })),
+          metaAdsTexts: (data.metaAdsTexts || []).map((text: string, i: number) => ({ id: `mad-${i}`, text })),
+          heroTexts: (data.heroTexts || []).map((text: string, i: number) => ({ id: `hero-${i}`, text })),
+          ctaVariations: (data.ctaVariations || []).map((text: string, i: number) => ({ id: `cta-${i}`, text })),
         };
         setCreatives(creatives);
-        setCurrentStep('creatives');
-        setOpenAccordion('creatives');
+        setIsGeneratingCreatives(false);
         setIsLoading(false);
         eventSource.close();
       });
@@ -364,6 +371,7 @@ export default function Home() {
       eventSource.onerror = (error) => {
         setError("Ошибка при генерации данных");
         setIsLoading(false);
+        setIsGeneratingCreatives(false);
         eventSource.close();
       };
     } catch (err) {
@@ -613,7 +621,7 @@ export default function Home() {
                     <AccordionTrigger>
                       <span className="flex items-center gap-2">
                         <span>🎨 Creatives</span>
-                        {!creatives && currentStep === 'useCases' && isLoading && (
+                        {isGeneratingCreatives && !creatives && (
                           <span className="text-xs text-muted-foreground">Creatives are generating...</span>
                         )}
                       </span>
