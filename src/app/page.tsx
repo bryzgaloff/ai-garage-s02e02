@@ -494,7 +494,7 @@ export default function Home() {
                       <span className="flex items-center gap-2">
                         <span>🎯 Jobs</span>
                         {!partialJtbd.functionalJobs && !partialJtbd.emotionalJobs && !partialJtbd.socialJobs && isLoading && (
-                          <span className="text-xs text-muted-foreground">Jobs are generating...</span>
+                          <span className="text-xs text-muted-foreground animate-pulse-subtle">Jobs are generating...</span>
                         )}
                       </span>
                     </AccordionTrigger>
@@ -530,7 +530,7 @@ export default function Home() {
                       <span className="flex items-center gap-2">
                         <span>💢 Pains</span>
                         {!partialJtbd.functionalPains && !partialJtbd.emotionalPains && !partialJtbd.socialPains && currentStep === 'jobs' && isLoading && (
-                          <span className="text-xs text-muted-foreground">Pains are generating...</span>
+                          <span className="text-xs text-muted-foreground animate-pulse-subtle">Pains are generating...</span>
                         )}
                       </span>
                     </AccordionTrigger>
@@ -566,7 +566,7 @@ export default function Home() {
                       <span className="flex items-center gap-2">
                         <span>✅ Benefits</span>
                         {!partialJtbd.benefits && currentStep === 'pains' && isLoading && (
-                          <span className="text-xs text-muted-foreground">Benefits are generating...</span>
+                          <span className="text-xs text-muted-foreground animate-pulse-subtle">Benefits are generating...</span>
                         )}
                       </span>
                     </AccordionTrigger>
@@ -590,7 +590,7 @@ export default function Home() {
                       <span className="flex items-center gap-2">
                         <span>📋 Use Cases</span>
                         {!partialJtbd.useCases && currentStep === 'benefits' && isLoading && (
-                          <span className="text-xs text-muted-foreground">Use Cases are generating...</span>
+                          <span className="text-xs text-muted-foreground animate-pulse-subtle">Use Cases are generating...</span>
                         )}
                       </span>
                     </AccordionTrigger>
@@ -614,7 +614,7 @@ export default function Home() {
                       <span className="flex items-center gap-2">
                         <span>🎨 Creatives</span>
                         {!creatives && currentStep === 'useCases' && isLoading && (
-                          <span className="text-xs text-muted-foreground">Creatives are generating...</span>
+                          <span className="text-xs text-muted-foreground animate-pulse-subtle">Creatives are generating...</span>
                         )}
                       </span>
                     </AccordionTrigger>
