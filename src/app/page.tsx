@@ -318,9 +318,12 @@ export default function Home() {
         accumulatedData.socialPains = data.social;
         setPartialJtbd({ ...accumulatedData });
         setCurrentStep('pains');
-        setOpenAccordion('pains');
-        // Auto-scroll to pains section when it completes
-        setTimeout(() => scrollToSection(painsRef), 100);
+        // Only open pains accordion if jobs is already open
+        if (openAccordion === 'jobs') {
+          setOpenAccordion('pains');
+          // Auto-scroll to pains section when it completes
+          setTimeout(() => scrollToSection(painsRef), 100);
+        }
       });
 
       eventSource.addEventListener('benefits', (event) => {
@@ -328,9 +331,12 @@ export default function Home() {
         accumulatedData.benefits = data.benefits;
         setPartialJtbd({ ...accumulatedData });
         setCurrentStep('benefits');
-        setOpenAccordion('benefits');
-        // Auto-scroll to benefits section when it completes
-        setTimeout(() => scrollToSection(benefitsRef), 100);
+        // Only open benefits accordion if pains is already open
+        if (openAccordion === 'pains') {
+          setOpenAccordion('benefits');
+          // Auto-scroll to benefits section when it completes
+          setTimeout(() => scrollToSection(benefitsRef), 100);
+        }
       });
 
       eventSource.addEventListener('useCases', (event) => {
@@ -338,9 +344,12 @@ export default function Home() {
         accumulatedData.useCases = data.useCases;
         setPartialJtbd({ ...accumulatedData });
         setCurrentStep('useCases');
-        setOpenAccordion('useCases');
-        // Auto-scroll to useCases section when it completes
-        setTimeout(() => scrollToSection(useCasesRef), 100);
+        // Only open useCases accordion if benefits is already open
+        if (openAccordion === 'benefits') {
+          setOpenAccordion('useCases');
+          // Auto-scroll to useCases section when it completes
+          setTimeout(() => scrollToSection(useCasesRef), 100);
+        }
 
         // Convert to full JTBD response
         jtbdData = {
@@ -371,9 +380,12 @@ export default function Home() {
         };
         setCreatives(creatives);
         setCurrentStep('creatives');
-        setOpenAccordion('creatives');
-        // Auto-scroll to creatives section when it completes
-        setTimeout(() => scrollToSection(creativesRef), 100);
+        // Only open creatives accordion if useCases is already open
+        if (openAccordion === 'useCases') {
+          setOpenAccordion('creatives');
+          // Auto-scroll to creatives section when it completes
+          setTimeout(() => scrollToSection(creativesRef), 100);
+        }
         setIsLoading(false);
         eventSource.close();
       });
