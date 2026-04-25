@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -272,6 +272,13 @@ export default function Home() {
   const [currentStep, setCurrentStep] = useState<string>("");
   const [openAccordion, setOpenAccordion] = useState<string | undefined>("");
 
+  // Refs for accordion sections to enable auto-scroll
+  const jobsRef = useRef<HTMLDivElement>(null);
+  const painsRef = useRef<HTMLDivElement>(null);
+  const benefitsRef = useRef<HTMLDivElement>(null);
+  const useCasesRef = useRef<HTMLDivElement>(null);
+  const creativesRef = useRef<HTMLDivElement>(null);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!productIdea.trim()) return;
@@ -300,6 +307,8 @@ export default function Home() {
         setPartialJtbd({ ...accumulatedData });
         setCurrentStep('jobs');
         setOpenAccordion('jobs');
+        // Auto-scroll to jobs section when it completes
+        setTimeout(() => scrollToSection(jobsRef), 100);
       });
 
       eventSource.addEventListener('pains', (event) => {
@@ -310,6 +319,8 @@ export default function Home() {
         setPartialJtbd({ ...accumulatedData });
         setCurrentStep('pains');
         setOpenAccordion('pains');
+        // Auto-scroll to pains section when it completes
+        setTimeout(() => scrollToSection(painsRef), 100);
       });
 
       eventSource.addEventListener('benefits', (event) => {
@@ -318,6 +329,8 @@ export default function Home() {
         setPartialJtbd({ ...accumulatedData });
         setCurrentStep('benefits');
         setOpenAccordion('benefits');
+        // Auto-scroll to benefits section when it completes
+        setTimeout(() => scrollToSection(benefitsRef), 100);
       });
 
       eventSource.addEventListener('useCases', (event) => {
@@ -326,6 +339,8 @@ export default function Home() {
         setPartialJtbd({ ...accumulatedData });
         setCurrentStep('useCases');
         setOpenAccordion('useCases');
+        // Auto-scroll to useCases section when it completes
+        setTimeout(() => scrollToSection(useCasesRef), 100);
 
         // Convert to full JTBD response
         jtbdData = {
@@ -357,6 +372,8 @@ export default function Home() {
         setCreatives(creatives);
         setCurrentStep('creatives');
         setOpenAccordion('creatives');
+        // Auto-scroll to creatives section when it completes
+        setTimeout(() => scrollToSection(creativesRef), 100);
         setIsLoading(false);
         eventSource.close();
       });
@@ -376,6 +393,15 @@ export default function Home() {
     setError(null);
     setIsGeneratingCreatives(false);
     handleSubmit({ preventDefault: () => {} } as React.FormEvent);
+  };
+
+  const scrollToSection = (sectionRef: React.RefObject<HTMLDivElement>) => {
+    if (sectionRef.current) {
+      sectionRef.current.scrollIntoView({
+        behavior: 'smooth',
+        block: 'start',
+      });
+    }
   };
 
   // Convert partial JTBD to display format
@@ -489,15 +515,16 @@ export default function Home() {
                   description={jtbd && creatives ? "Определены ключевые работы, боли, выгоды и сценарии использования" : "Анализ выполняется поэтапно..."}
                 />
                 <Accordion defaultValue={openAccordion as any} onValueChange={(value: any) => setOpenAccordion(value)} className="w-full">
-                  <AccordionItem value="jobs">
-                    <AccordionTrigger>
-                      <span className="flex items-center gap-2">
-                        <span>🎯 Jobs</span>
-                        {!partialJtbd.functionalJobs && !partialJtbd.emotionalJobs && !partialJtbd.socialJobs && isLoading && (
-                          <span className="text-xs text-muted-foreground">Jobs are generating...</span>
-                        )}
-                      </span>
-                    </AccordionTrigger>
+                  <div ref={jobsRef}>
+                    <AccordionItem value="jobs">
+                      <AccordionTrigger>
+                        <span className="flex items-center gap-2">
+                          <span>🎯 Jobs</span>
+                          {!partialJtbd.functionalJobs && !partialJtbd.emotionalJobs && !partialJtbd.socialJobs && isLoading && (
+                            <span className="text-xs text-muted-foreground">Jobs are generating...</span>
+                          )}
+                        </span>
+                      </AccordionTrigger>
                     <AccordionContent>
                       <div className="flex flex-wrap gap-2 pt-2">
                         {(partialJtbd.functionalJobs || []).map((text, i) => (
@@ -523,17 +550,19 @@ export default function Home() {
                         )}
                       </div>
                     </AccordionContent>
-                  </AccordionItem>
+                    </AccordionItem>
+                  </div>
 
-                  <AccordionItem value="pains">
-                    <AccordionTrigger>
-                      <span className="flex items-center gap-2">
-                        <span>💢 Pains</span>
-                        {!partialJtbd.functionalPains && !partialJtbd.emotionalPains && !partialJtbd.socialPains && currentStep === 'jobs' && isLoading && (
-                          <span className="text-xs text-muted-foreground">Pains are generating...</span>
-                        )}
-                      </span>
-                    </AccordionTrigger>
+                  <div ref={painsRef}>
+                    <AccordionItem value="pains">
+                      <AccordionTrigger>
+                        <span className="flex items-center gap-2">
+                          <span>💢 Pains</span>
+                          {!partialJtbd.functionalPains && !partialJtbd.emotionalPains && !partialJtbd.socialPains && currentStep === 'jobs' && isLoading && (
+                            <span className="text-xs text-muted-foreground">Pains are generating...</span>
+                          )}
+                        </span>
+                      </AccordionTrigger>
                     <AccordionContent>
                       <div className="flex flex-wrap gap-2 pt-2">
                         {(partialJtbd.functionalPains || []).map((text, i) => (
@@ -559,17 +588,19 @@ export default function Home() {
                         )}
                       </div>
                     </AccordionContent>
-                  </AccordionItem>
+                    </AccordionItem>
+                  </div>
 
-                  <AccordionItem value="benefits">
-                    <AccordionTrigger>
-                      <span className="flex items-center gap-2">
-                        <span>✅ Benefits</span>
-                        {!partialJtbd.benefits && currentStep === 'pains' && isLoading && (
-                          <span className="text-xs text-muted-foreground">Benefits are generating...</span>
-                        )}
-                      </span>
-                    </AccordionTrigger>
+                  <div ref={benefitsRef}>
+                    <AccordionItem value="benefits">
+                      <AccordionTrigger>
+                        <span className="flex items-center gap-2">
+                          <span>✅ Benefits</span>
+                          {!partialJtbd.benefits && currentStep === 'pains' && isLoading && (
+                            <span className="text-xs text-muted-foreground">Benefits are generating...</span>
+                          )}
+                        </span>
+                      </AccordionTrigger>
                     <AccordionContent>
                       <div className="flex flex-wrap gap-2 pt-2">
                         {(partialJtbd.benefits || []).map((text, i) => (
@@ -583,17 +614,19 @@ export default function Home() {
                         )}
                       </div>
                     </AccordionContent>
-                  </AccordionItem>
+                    </AccordionItem>
+                  </div>
 
-                  <AccordionItem value="useCases">
-                    <AccordionTrigger>
-                      <span className="flex items-center gap-2">
-                        <span>📋 Use Cases</span>
-                        {!partialJtbd.useCases && currentStep === 'benefits' && isLoading && (
-                          <span className="text-xs text-muted-foreground">Use Cases are generating...</span>
-                        )}
-                      </span>
-                    </AccordionTrigger>
+                  <div ref={useCasesRef}>
+                    <AccordionItem value="useCases">
+                      <AccordionTrigger>
+                        <span className="flex items-center gap-2">
+                          <span>📋 Use Cases</span>
+                          {!partialJtbd.useCases && currentStep === 'benefits' && isLoading && (
+                            <span className="text-xs text-muted-foreground">Use Cases are generating...</span>
+                          )}
+                        </span>
+                      </AccordionTrigger>
                     <AccordionContent>
                       <div className="flex flex-wrap gap-2 pt-2">
                         {(partialJtbd.useCases || []).map((text, i) => (
@@ -607,17 +640,19 @@ export default function Home() {
                         )}
                       </div>
                     </AccordionContent>
-                  </AccordionItem>
+                    </AccordionItem>
+                  </div>
 
-                  <AccordionItem value="creatives">
-                    <AccordionTrigger>
-                      <span className="flex items-center gap-2">
-                        <span>🎨 Creatives</span>
-                        {!creatives && currentStep === 'useCases' && isLoading && (
-                          <span className="text-xs text-muted-foreground">Creatives are generating...</span>
-                        )}
-                      </span>
-                    </AccordionTrigger>
+                  <div ref={creativesRef}>
+                    <AccordionItem value="creatives">
+                      <AccordionTrigger>
+                        <span className="flex items-center gap-2">
+                          <span>🎨 Creatives</span>
+                          {!creatives && currentStep === 'useCases' && isLoading && (
+                            <span className="text-xs text-muted-foreground">Creatives are generating...</span>
+                          )}
+                        </span>
+                      </AccordionTrigger>
                     <AccordionContent>
                       <div className="grid gap-4 pt-2">
                         {creatives ? (
@@ -678,7 +713,8 @@ export default function Home() {
                         )}
                       </div>
                     </AccordionContent>
-                  </AccordionItem>
+                    </AccordionItem>
+                  </div>
                 </Accordion>
               </section>
             )}
