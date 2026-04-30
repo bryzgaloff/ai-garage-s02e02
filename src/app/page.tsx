@@ -407,7 +407,7 @@ export default function Home() {
     handleSubmit({ preventDefault: () => {} } as React.FormEvent);
   };
 
-  const scrollToSection = (sectionRef: React.RefObject<HTMLDivElement>) => {
+  const scrollToSection = (sectionRef: React.RefObject<HTMLDivElement | null>) => {
     if (sectionRef.current) {
       sectionRef.current.scrollIntoView({
         behavior: 'smooth',
